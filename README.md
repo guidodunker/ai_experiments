@@ -1,4 +1,4 @@
-# ai_experiments
-ai experiments: tools, vectors, agents
-3 projects to come
-here is dev
+# ai_experiments 3 projects 
+- ai_embed (vector db)
+- ai_react (self modifying app)
+
