@@ -1,0 +1,21 @@
+{
+  "name": "openrouter-cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "One-shot CLI that streams a model reply from OpenRouter",
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-strip-types --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/main.ts",
+    "typecheck": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@openrouter/agent": "0.11.0",
+    "@openrouter/sdk": "^1.2.93",
+    "zod": "4.5.4"
+  }
+}
