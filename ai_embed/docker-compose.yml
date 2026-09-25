@@ -1,0 +1,39 @@
+name: ai-embed
+
+services:
+  db:
+    image: pgvector/pgvector:pg18
+    container_name: ai_embed_pgvector
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-embed}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-embed}
+      POSTGRES_DB: ${POSTGRES_DB:-embed}
+      # Vergleichsläufe sind read-heavy und laufen auf Wegwerf-Daten:
+      # etwas mehr RAM für Seq-Scans über die Vektoren.
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    command:
+      - postgres
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - work_mem=64MB
+      - -c
+      - maintenance_work_mem=512MB
+    ports:
+      - "${POSTGRES_PORT:-5436}:5432"
+    volumes:
+      # PG18 setzt PGDATA auf /var/lib/postgresql/18/docker, das Image-Volume
+      # ist /var/lib/postgresql — daher hier mounten, nicht auf .../data.
+      - pgdata:/var/lib/postgresql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    shm_size: 256mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-embed} -d ${POSTGRES_DB:-embed}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  pgdata:

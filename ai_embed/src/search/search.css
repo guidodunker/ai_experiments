@@ -1,0 +1,557 @@
+/* Nutzt die Design-Tokens aus src/index.css (hell/dunkel bereits versorgt). */
+
+.suche {
+  text-align: left;
+  inline-size: 100%;
+  max-inline-size: 860px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+  box-sizing: border-box;
+}
+
+/* --- Kopf ---------------------------------------------------------------- */
+
+.kopf h1 {
+  font-size: 40px;
+  letter-spacing: -1.2px;
+  margin: 0 0 12px;
+}
+
+.untertitel {
+  max-inline-size: 60ch;
+  margin-block-end: 16px;
+}
+
+.modellzeile {
+  font-size: 14px;
+  color: var(--text);
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--social-bg);
+}
+
+.modellzeile.warnung {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--text-h);
+}
+
+.modellzeile code {
+  font-size: 13px;
+  padding: 2px 6px;
+}
+
+/* --- Suchfeld ------------------------------------------------------------ */
+
+.suchfeld {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-block: 24px 12px;
+  flex-wrap: wrap;
+}
+
+.suchfeld input[type='search'] {
+  flex: 1 1 320px;
+  min-inline-size: 0;
+  font: inherit;
+  font-size: 17px;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.suchfeld input[type='search']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+.treffer-anzahl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.treffer-anzahl select {
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.suchfeld button[type='submit'] {
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  cursor: pointer;
+}
+
+.suchfeld button[type='submit']:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.suchfeld button[type='submit']:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* --- Beispielanfragen ---------------------------------------------------- */
+
+.beispiele {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-end: 28px;
+}
+
+.beispiel {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--social-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+.beispiel:hover:not(:disabled) {
+  border-color: var(--accent-border);
+  color: var(--text-h);
+}
+
+.beispiel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Zeitleiste ---------------------------------------------------------- */
+
+.zeitleiste {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 14px;
+  padding-block-end: 12px;
+  border-block-end: 1px solid var(--border);
+  margin-block-end: 16px;
+}
+
+.zeitleiste strong {
+  color: var(--text-h);
+}
+
+.zeiten {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.trenner {
+  opacity: 0.4;
+}
+
+.anteil {
+  color: var(--accent);
+}
+
+/* --- Trefferliste -------------------------------------------------------- */
+
+.trefferliste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.treffer {
+  display: grid;
+  grid-template-columns: 34px 1fr 96px;
+  gap: 14px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.treffer:hover {
+  border-color: var(--accent-border);
+}
+
+.rang {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--text);
+  text-align: right;
+  padding-block-start: 3px;
+}
+
+.titelzeile {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.treffer h2 {
+  font-size: 17px;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.preis {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.preis-premium {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.pfad {
+  font-size: 13px;
+  margin-block: 4px 8px;
+}
+
+.marke {
+  margin-inline-start: 10px;
+  padding-inline-start: 10px;
+  border-inline-start: 1px solid var(--border);
+  color: var(--text-h);
+}
+
+.merkmale {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+}
+
+.merkmale li {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.einsatz {
+  background: var(--accent-bg);
+  border-color: var(--accent-border) !important;
+  color: var(--text-h);
+}
+
+.feature {
+  background: var(--code-bg);
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+
+/* --- Distanz ------------------------------------------------------------- */
+
+.distanz {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-block-start: 4px;
+}
+
+.balken {
+  block-size: 5px;
+  background: var(--code-bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.fuellung {
+  block-size: 100%;
+  background: var(--accent);
+}
+
+.wert {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  text-align: right;
+}
+
+/* --- Meldungen ----------------------------------------------------------- */
+
+.meldung {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.meldung.leer {
+  color: var(--text);
+  text-align: center;
+  border-style: dashed;
+}
+
+.meldung.fehler {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--text-h);
+}
+
+.meldung.fehler strong {
+  display: block;
+  margin-block-end: 6px;
+}
+
+.meldung pre {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .treffer {
+    grid-template-columns: 26px 1fr;
+  }
+
+  /* Die rechte Spalte rutscht unter den Inhalt und wird waagerecht. */
+  .rechts {
+    grid-column: 2;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .distanz {
+    flex: 1;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .balken {
+    flex: 1;
+  }
+
+  .hinzu {
+    padding-inline: 12px;
+  }
+}
+
+.reiter {
+  display: flex;
+  gap: 4px;
+  border-block-end: 1px solid var(--border);
+  margin-block: 24px 0;
+}
+
+.reiter button {
+  font: inherit;
+  font-size: 15px;
+  color: var(--text);
+  background: none;
+  border: none;
+  border-block-end: 2px solid transparent;
+  padding: 10px 16px;
+  margin-block-end: -1px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reiter button:hover { color: var(--text-h); }
+
+.reiter button.aktiv {
+  color: var(--text-h);
+  border-block-end-color: var(--accent);
+}
+
+.zaehler {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 999px;
+  min-inline-size: 18px;
+  text-align: center;
+  padding: 1px 6px;
+}
+
+.erklaerung {
+  font-size: 14px;
+  max-inline-size: 68ch;
+  margin-block: 20px 0;
+}
+
+.produktwahl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin-block-end: 20px;
+  flex-wrap: wrap;
+}
+
+.produktwahl select {
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 8px;
+  max-inline-size: 100%;
+  flex: 1 1 320px;
+}
+
+.basis { margin-block-end: 24px; }
+
+.basis-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-end: 14px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-h);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  padding: 4px 6px 4px 4px;
+}
+
+.chip-id {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--bg);
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+
+.chip button {
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.chip button:hover { color: var(--text-h); }
+
+.basis-aktionen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.schalter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.hauptknopf {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+.hauptknopf:hover:not(:disabled) { filter: brightness(1.1); }
+
+.hauptknopf:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.doc-id {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--code-bg);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-inline-end: 8px;
+}
+
+.treffer.ist-basis {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.basis-marke {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+}
+
+.rechts {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.hinzu {
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 0;
+  cursor: pointer;
+}
+
+.hinzu:hover:not(:disabled) {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.hinzu:disabled {
+  color: var(--accent);
+  border-color: var(--accent-border);
+  cursor: default;
+}
