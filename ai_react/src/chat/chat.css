@@ -1,0 +1,624 @@
+.chat-layout {
+  display: flex;
+  height: 100vh;
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  flex: 1;
+  min-width: 0;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #333;
+}
+
+.chat-title {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.model-picker {
+  flex: 1;
+}
+
+.model-picker input {
+  width: 100%;
+  max-width: 340px;
+  background: #1c1c22;
+  border: 1px solid #3a3a44;
+  border-radius: 6px;
+  color: #ddd;
+  padding: 0.35rem 0.6rem;
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+
+.session-cost {
+  color: #9db8e8;
+  font-family: monospace;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.chat-new {
+  background: #26262e;
+  border: 1px solid #3a3a44;
+  border-radius: 6px;
+  color: #ccc;
+  padding: 0.35rem 0.8rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.chat-new:hover:not(:disabled) {
+  border-color: #666;
+}
+
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem 0;
+}
+
+.empty-hint {
+  margin: auto;
+  text-align: center;
+  color: #888;
+  max-width: 32rem;
+}
+
+.empty-example {
+  font-style: italic;
+  color: #aaa;
+}
+
+.msg {
+  padding: 0.6rem 0.9rem;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+}
+
+.msg-user {
+  align-self: flex-end;
+  background: #2b4a8b;
+  color: #fff;
+  max-width: 80%;
+}
+
+.msg-assistant {
+  align-self: flex-start;
+  background: #232329;
+  color: #e8e8e8;
+  max-width: 90%;
+}
+
+.msg-error {
+  align-self: stretch;
+  background: #3a1d1d;
+  color: #f0a8a8;
+  border: 1px solid #6b2b2b;
+  font-size: 0.9rem;
+}
+
+.msg-cost {
+  align-self: center;
+  color: #777;
+  font-size: 0.75rem;
+  font-family: monospace;
+  padding: 0.1rem 0.6rem;
+}
+
+.cursor {
+  animation: blink 1s step-start infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.busy-indicator {
+  align-self: flex-start;
+  color: #888;
+  font-size: 0.85rem;
+  font-style: italic;
+  padding-left: 0.4rem;
+}
+
+/* Tool call cards */
+
+.tool-card {
+  align-self: flex-start;
+  width: 90%;
+  border: 1px solid #33333d;
+  border-radius: 8px;
+  background: #1b1b21;
+  font-size: 0.85rem;
+}
+
+.tool-card.tool-error {
+  border-color: #6b2b2b;
+}
+
+.tool-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #ccc;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+  text-align: left;
+  font-size: inherit;
+}
+
+.tool-status {
+  width: 1.1rem;
+  text-align: center;
+}
+
+.tool-status.ok {
+  color: #7bc87b;
+}
+
+.tool-status.err {
+  color: #e07a7a;
+}
+
+.tool-status.pending {
+  color: #999;
+}
+
+.tool-name {
+  color: #9db8e8;
+}
+
+.tool-path {
+  flex: 1;
+  color: #888;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: monospace;
+}
+
+.tool-chevron {
+  color: #666;
+}
+
+.tool-body {
+  border-top: 1px solid #2a2a33;
+  padding: 0.5rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tool-label {
+  color: #777;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.2rem;
+}
+
+.tool-body pre {
+  margin: 0;
+  max-height: 16rem;
+  overflow: auto;
+  background: #131318;
+  border-radius: 6px;
+  padding: 0.5rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Agent commit panel */
+
+.commit-panel {
+  width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  border-left: 1px solid #333;
+  background: #17171c;
+  font-size: 0.85rem;
+}
+
+.commit-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid #333;
+  font-weight: 600;
+  color: #ddd;
+}
+
+.commit-panel-header button {
+  background: none;
+  border: 1px solid #3a3a44;
+  border-radius: 6px;
+  color: #ccc;
+  cursor: pointer;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+.commit-panel-header button:hover {
+  border-color: #666;
+}
+
+.commit-recovery-link {
+  margin-left: auto;
+  margin-right: 0.5rem;
+  border: 1px solid #3a3a44;
+  border-radius: 6px;
+  color: #9a9aa4;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 0.15rem 0.5rem;
+}
+
+.commit-recovery-link:hover {
+  border-color: #666;
+  color: #ddd;
+}
+
+.commit-panel-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.commit-item {
+  border: 1px solid #2a2a33;
+  border-radius: 8px;
+  background: #1e1e25;
+  padding: 0.45rem 0.6rem;
+}
+
+.commit-item.snapshot {
+  opacity: 0.7;
+}
+
+.commit-subject {
+  color: #e0e0e0;
+  line-height: 1.35;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.commit-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  color: #888;
+  font-size: 0.75rem;
+}
+
+.commit-meta code {
+  color: #9db8e8;
+  font-family: monospace;
+}
+
+.commit-badge {
+  border: 1px solid #3a3a44;
+  border-radius: 4px;
+  padding: 0 0.3rem;
+  color: #999;
+  font-size: 0.7rem;
+}
+
+.commit-forget {
+  margin-left: auto;
+  background: none;
+  border: 1px solid #3a3a44;
+  border-radius: 4px;
+  color: #999;
+  cursor: pointer;
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  padding: 0 0.35rem;
+}
+
+.commit-forget:hover:not(:disabled) {
+  border-color: #6b2b2b;
+  color: #e07a7a;
+}
+
+.commit-forget:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.commit-empty,
+.commit-error {
+  color: #888;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.commit-error {
+  color: #f0a8a8;
+}
+
+/* Input */
+
+.message-input {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.75rem 0 1rem;
+  border-top: 1px solid #333;
+}
+
+.message-input textarea {
+  flex: 1;
+  resize: none;
+  background: #1c1c22;
+  border: 1px solid #3a3a44;
+  border-radius: 8px;
+  color: #e8e8e8;
+  padding: 0.6rem 0.8rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.message-input textarea:focus {
+  outline: none;
+  border-color: #4a6db5;
+}
+
+.message-input button {
+  align-self: flex-end;
+  background: #2b4a8b;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.message-input button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.msg-health {
+  align-self: stretch;
+  font-size: 0.8rem;
+  font-family: monospace;
+  padding: 0.35rem 0.7rem;
+  border-radius: 8px;
+  color: #8c8c96;
+  background: #1c1c22;
+  border: 1px solid #2a2a32;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.msg-health-ok {
+  color: #7fae7f;
+}
+
+.msg-health-repairing {
+  color: #d3b06a;
+  border-color: #4a3c1d;
+}
+
+.msg-health-rolled-back,
+.msg-health-gave-up {
+  color: #f0a8a8;
+  background: #3a1d1d;
+  border-color: #6b2b2b;
+}
+
+.msg-broken {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: #3a1d1d;
+  color: #f0a8a8;
+  border: 1px solid #6b2b2b;
+  font-size: 0.9rem;
+}
+
+.repair-button {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: #6b2b2b;
+  color: #ffe8e8;
+  border: 1px solid #8b3b3b;
+  border-radius: 6px;
+  padding: 0.25rem 0.7rem;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.repair-button:hover {
+  background: #8b3b3b;
+}
+
+.app-crash {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #18181c;
+}
+
+.app-crash-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1.2rem;
+  background: #3a1d1d;
+  color: #f0a8a8;
+  border-bottom: 1px solid #6b2b2b;
+  font-size: 0.9rem;
+}
+
+.app-crash-banner pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.8rem;
+  color: #ffd0d0;
+}
+
+.app-crash-banner a {
+  color: #ffd0d0;
+}
+
+.services-panel {
+  border-top: 1px solid #333;
+  background: #17171c;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.services-summary {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.9rem;
+  background: none;
+  border: none;
+  color: #ddd;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.services-counts {
+  color: #888;
+}
+
+.services-list {
+  max-height: 40vh;
+  overflow-y: auto;
+  padding: 0.3rem 0.6rem 0.6rem;
+}
+
+.service-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem;
+  border-top: 1px solid #262630;
+}
+
+.service-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #666;
+  flex-shrink: 0;
+}
+
+.service-dot.ready {
+  background: #3fb950;
+}
+
+.service-dot.starting {
+  background: #d29922;
+}
+
+.service-dot.crashed {
+  background: #f85149;
+}
+
+.service-name {
+  color: #ddd;
+  flex: 1;
+}
+
+.service-port {
+  color: #888;
+}
+
+.service-badge {
+  border: 1px solid #3a3a44;
+  border-radius: 6px;
+  padding: 0 0.35rem;
+  color: #888;
+  font-size: 0.75rem;
+}
+
+.service-actions button {
+  background: none;
+  border: 1px solid #3a3a44;
+  border-radius: 6px;
+  color: #ccc;
+  cursor: pointer;
+  padding: 0.1rem 0.4rem;
+  margin-left: 0.25rem;
+}
+
+.service-actions button:hover {
+  border-color: #666;
+}
+
+.services-error {
+  color: #f85149;
+  padding: 0.4rem 0.3rem;
+}
+
+.service-logs {
+  margin-top: 0.5rem;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: #0f0f13;
+}
+
+.service-logs-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid #333;
+  color: #aaa;
+}
+
+.service-logs-header button {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.service-logs pre {
+  margin: 0;
+  padding: 0.5rem;
+  max-height: 30vh;
+  overflow: auto;
+  font-size: 0.75rem;
+  color: #ccc;
+  white-space: pre-wrap;
+}

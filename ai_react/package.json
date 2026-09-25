@@ -1,0 +1,28 @@
+{
+  "name": "ai-react",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "test": "node --experimental-strip-types --test tests/syntaxCheck.test.ts tests/tscCheck.test.ts tests/healthReport.test.ts tests/serviceManifest.test.ts tests/logBuffer.test.ts tests/servicePorts.test.ts tests/spawnArgs.test.ts tests/serviceSupervisor.test.ts tests/serviceHealth.test.ts",
+    "preview": "vite preview",
+    "embed": "node --experimental-strip-types --env-file=.env scripts/embed.ts"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@openrouter/sdk": "^1.2.136",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "oxlint": "^1.79.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.2"
+  }
+}
