@@ -1,0 +1,10 @@
+node_modules/
+
+# Holds your OpenRouter API key. Never commit this.
+.env
+.env.*
+!.env.example
+
+# JetBrains project files
+.idea/
+.junie/

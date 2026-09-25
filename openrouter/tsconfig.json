@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["es2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+
+    // Node erases types rather than compiling them, so reject any syntax it
+    // cannot strip (enum, namespace, constructor parameter properties) and
+    // require `import type` for type-only imports.
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+
+    // Relative imports are written as "./sse.ts" because Node's resolver does
+    // not remap extensions. Typechecking only; nothing is emitted.
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"]
+}
