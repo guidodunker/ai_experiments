@@ -1,0 +1,12 @@
+{
+  "name": "notes-api",
+  "kind": "process",
+  "entry": "index.ts",
+  "port": 4001,
+  "env": {},
+  "enabled": true,
+  "health": {
+    "path": "/health",
+    "timeoutMs": 10000
+  }
+}
