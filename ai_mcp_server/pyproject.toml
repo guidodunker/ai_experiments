@@ -1,0 +1,9 @@
+[project]
+name = "ai-mcp-server"
+version = "0.1.0"
+description = "MCP server with in-memory notes"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=2.2.0",
+    "pyjwt[crypto]>=2.15.1",
+]

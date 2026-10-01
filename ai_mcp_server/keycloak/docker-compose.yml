@@ -1,0 +1,24 @@
+# Local Keycloak that issues tokens for the notes MCP server.
+# Dev mode only: H2 file database, HTTP, admin/admin.
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # Fixes the issuer to http://localhost:8180/realms/mcp, whatever host the request uses.
+      KC_HOSTNAME: http://localhost:8180
+    ports:
+      # 8080 is taken by another project, so Keycloak is published on 8180.
+      - "127.0.0.1:8180:8080"
+    volumes:
+      # Keeps registered clients and sessions across restarts. Mounted on data/ rather than
+      # data/h2 so the volume inherits the image's ownership (Keycloak runs as uid 1000).
+      # The realm file is only imported into an empty database: after editing it,
+      # run `docker compose down -v`.
+      - keycloak-data:/opt/keycloak/data
+      - ./mcp-realm.json:/opt/keycloak/data/import/mcp-realm.json:ro
+
+volumes:
+  keycloak-data:
