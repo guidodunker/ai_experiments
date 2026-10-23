@@ -1,0 +1,95 @@
+# Local single-node Elasticsearch + Postgres, synced by Logstash, for development.
+# Security is disabled: ports are bound to 127.0.0.1 only. Do not expose this setup.
+name: elasticsearch
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - xpack.license.self_generated.type=basic
+      - ES_JAVA_OPTS=${ES_JAVA_OPTS}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "127.0.0.1:${ES_PORT}:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:${POSTGRES_VERSION}
+    container_name: postgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT}:5432"
+    volumes:
+      # Postgres 18+ keeps its data in a versioned subdirectory below /var/lib/postgresql.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  logstash:
+    build:
+      context: ./logstash
+      args:
+        STACK_VERSION: ${STACK_VERSION}
+    image: logstash-jdbc:${STACK_VERSION}
+    container_name: logstash
+    environment:
+      - LS_JAVA_OPTS=${LS_JAVA_OPTS}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - SYNC_SCHEDULE=${SYNC_SCHEDULE}
+      - XPACK_MONITORING_ENABLED=false
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./logstash/templates:/usr/share/logstash/templates:ro
+      # Keeps the last synced updated_at across restarts.
+      - lsdata:/usr/share/logstash/data
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  search-ui:
+    image: nginx:${NGINX_VERSION}
+    container_name: search-ui
+    ports:
+      - "127.0.0.1:${SEARCH_UI_PORT}:80"
+    volumes:
+      - ./search-ui/index.html:/usr/share/nginx/html/index.html:ro
+      - ./search-ui/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  esdata:
+  pgdata:
+  lsdata:

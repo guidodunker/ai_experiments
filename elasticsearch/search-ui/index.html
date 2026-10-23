@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product Search</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --surface: #ffffff; --text: #1d1d1b; --muted: #6b6b66;
+    --border: #e2e2dd; --accent: #2457c5; --mark: #fff1a8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161615; --surface: #1f1f1d; --text: #ececea; --muted: #9a9a94;
+      --border: #33332f; --accent: #7aa2ff; --mark: #5c4d00;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px; }
+  h1 { font-size: 20px; margin: 0 0 16px; }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  input[type=search], select {
+    font: inherit; color: var(--text); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;
+  }
+  input[type=search] { flex: 1 1 260px; }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .status { color: var(--muted); font-size: 13px; margin: 12px 0; min-height: 20px; }
+  .status.error { color: #d33; }
+  ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  li {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px;
+  }
+  .title { display: flex; justify-content: space-between; gap: 12px; font-weight: 600; }
+  .score { color: var(--muted); font-weight: 400; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .desc { margin: 4px 0 6px; }
+  .meta { color: var(--muted); font-size: 13px; }
+  em { font-style: normal; background: var(--mark); border-radius: 2px; padding: 0 1px; }
+  details { margin-top: 20px; font-size: 13px; }
+  summary { cursor: pointer; color: var(--muted); }
+  pre {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px; overflow-x: auto; font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Product search</h1>
+  <div class="controls">
+    <input id="q" type="search" placeholder="Search name and description…" autofocus>
+    <select id="mode" aria-label="Query type">
+      <option value="fuzzy">Match, typo-tolerant</option>
+      <option value="match">Match, exact terms</option>
+      <option value="phrase">Phrase</option>
+      <option value="prefix">Prefix (search as you type)</option>
+    </select>
+  </div>
+  <div id="status" class="status"></div>
+  <ol id="results"></ol>
+  <details>
+    <summary>Query sent to Elasticsearch</summary>
+    <pre id="query"></pre>
+  </details>
+</main>
+<script>
+  const FIELDS = ["name^2", "description"];
+  const $ = (id) => document.getElementById(id);
+
+  function buildQuery(text, mode) {
+    const query = !text
+      ? { match_all: {} }
+      : {
+          multi_match: {
+            query: text,
+            fields: FIELDS,
+            ...(mode === "fuzzy"  && { fuzziness: "AUTO" }),
+            ...(mode === "phrase" && { type: "phrase" }),
+            ...(mode === "prefix" && { type: "bool_prefix" }),
+          },
+        };
+    return {
+      size: 20,
+      query,
+      highlight: {
+        encoder: "html",
+        fields: { name: { number_of_fragments: 0 }, description: { number_of_fragments: 0 } },
+      },
+    };
+  }
+
+  const escapeHtml = (s) =>
+    String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+  function render(hits) {
+    $("results").innerHTML = hits.map(({ _source: p, _score, highlight = {} }) => `
+      <li>
+        <div class="title">
+          <span>${highlight.name?.[0] ?? escapeHtml(p.name)}</span>
+          <span class="score">${_score == null ? "" : _score.toFixed(2)}</span>
+        </div>
+        <div class="desc">${highlight.description?.[0] ?? escapeHtml(p.description)}</div>
+        <div class="meta">${escapeHtml(p.category)} · ${escapeHtml(p.brand)} · ${Number(p.price).toFixed(2)} ·
+          ${p.stock > 0 ? `${p.stock} in stock` : "out of stock"} · ${(p.tags ?? []).map(escapeHtml).join(", ")}</div>
+      </li>`).join("");
+  }
+
+  let seq = 0;
+  async function search() {
+    const body = buildQuery($("q").value.trim(), $("mode").value);
+    $("query").textContent = JSON.stringify(body, null, 2);
+    const mine = ++seq;
+    try {
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (mine !== seq) return; // a newer search has started
+      if (!res.ok) throw new Error(data.error?.reason ?? `HTTP ${res.status}`);
+      $("status").className = "status";
+      // Elasticsearch stops counting at 10,000 by default ("gte" means "at least").
+      const total = data.hits.total.value.toLocaleString("en-US") + (data.hits.total.relation === "gte" ? "+" : "");
+      $("status").textContent = `${total} hits in ${data.took} ms`;
+      render(data.hits.hits);
+    } catch (err) {
+      if (mine !== seq) return;
+      $("status").className = "status error";
+      $("status").textContent = `Search failed: ${err.message}`;
+      $("results").innerHTML = "";
+    }
+  }
+
+  let timer;
+  $("q").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(search, 200); });
+  $("mode").addEventListener("change", search);
+  search();
+</script>
+</body>
+</html>
