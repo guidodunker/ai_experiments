@@ -63,7 +63,12 @@ The drop-down selects the query type:
 | Phrase                     | `multi_match` with `type: phrase`           | `noise cancellation`                      |
 | Prefix (search as you type)| `multi_match` with `type: bool_prefix`      | `mech` finds "Mechanical"                 |
 
-"Query sent to Elasticsearch" shows the request body, ready to copy into your own tests.
+While you type, a drop-down proposes up to 8 words from product names that start with the word at the end of the search field.
+Arrow keys select a word, Enter or a click puts it into the field and searches, Esc closes the list.
+In the typo-tolerant mode the proposals tolerate typos as well (`wirles` proposes "Wireless").
+The proposals come from a [completion suggester](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/search-suggesters#completion-suggester) on the field `name_suggest`, which Logstash fills with the words of `name`.
+
+"Query sent to Elasticsearch" shows the request body, ready to copy into your own tests; "Suggest query sent to Elasticsearch" shows the same for the drop-down.
 When Elasticsearch stops counting at 10,000, the UI shows "10,000+ hits".
 
 nginx forwards only `POST /api/search` to `products/_search`; every other request to Elasticsearch through the UI is refused.
@@ -77,7 +82,9 @@ nginx forwards only `POST /api/search` to `products/_search`; every other reques
 - The Postgres `id` is the document id: an update overwrites the document instead of creating a duplicate.
 - Rows are read in pages of 10,000 (`LIMIT :size OFFSET :offset`), so large syncs never sit in Logstash's heap at once.
 - `tags` (a Postgres array) is sent as a comma-separated string and split again in Logstash, because the JDBC input cannot convert arrays.
+- The words of `name` are copied into `name_suggest` (a `completion` field) for the type-ahead.
 - The index mapping comes from `logstash/templates/products.json`, which Logstash installs as an index template.
+  The template only applies when the index is created: after changing it, re-sync from scratch (see [Cleanup](#cleanup)).
 
 Try it:
 

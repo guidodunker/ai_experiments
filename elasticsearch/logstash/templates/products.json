@@ -10,6 +10,7 @@
         "id":          { "type": "long" },
         "sku":         { "type": "keyword" },
         "name":        { "type": "text", "fields": { "keyword": { "type": "keyword" } } },
+        "name_suggest": { "type": "completion", "analyzer": "standard" },
         "description": { "type": "text" },
         "category":    { "type": "keyword" },
         "brand":       { "type": "keyword" },
