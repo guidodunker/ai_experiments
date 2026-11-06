@@ -298,6 +298,9 @@ export async function executeTool(
       return { result: logs.length > 0 ? logs : '(no output)', isError: false }
     }
     default:
-      return { result: `Unknown tool: ${name}`, isError: true }
+      return {
+        result: `Unknown tool: ${name}. Available tools: ${toolSchemas.map((t) => t.function.name).join(', ')}`,
+        isError: true,
+      }
   }
 }

@@ -42,6 +42,10 @@ export async function streamChat(params: StreamChatParams): Promise<StreamResult
       stream: true,
       // Ask OpenRouter to include token + cost accounting in the final chunk.
       usage: { include: true },
+      // Groq rejects the whole response when the model calls a tool that is not
+      // in `tools` (gpt-oss-20b invents names like `search_file`). Other
+      // providers pass the call through, and executeTool answers it with an error.
+      provider: { ignore: ['Groq'] },
     }),
   })
 
