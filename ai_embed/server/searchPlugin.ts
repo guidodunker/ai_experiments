@@ -20,16 +20,27 @@ import { getPool, describeTarget, toVectorLiteral } from "../scripts/lib/db.ts";
 import { embedOne } from "../scripts/lib/embed.ts";
 import { defaultModel } from "../scripts/lib/models.ts";
 import type { ModelSpec } from "../scripts/lib/models.ts";
+import { esCentroid, esHybrid, esKnn, esStatus, withMeta } from "./esSearch.ts";
+import type { ProductMeta } from "./esSearch.ts";
 
-type ProductMeta = {
-  name: string;
-  category: string;
-  subCategory: string;
-  brand: string;
-  priceSegment: string;
-  useCases: string[];
-  features: string[];
-};
+/**
+ * Welche Suchmaschine rankt: pgvector (exakt, Seq-Scan), Elasticsearch
+ * (kNN auf HNSW) oder Elasticsearch hybrid (BM25 + kNN). Embedding-Modell und
+ * Query-Vektor sind in allen Fällen dieselben.
+ */
+type Engine = "pgvector" | "elasticsearch" | "hybrid";
+
+function parseEngine(value: unknown): Engine {
+  return value === "elasticsearch" || value === "hybrid" ? value : "pgvector";
+}
+
+const DEFAULT_TEXT_BOOST = 0.1;
+const MAX_TEXT_BOOST = 10;
+
+function parseTextBoost(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? Math.min(n, MAX_TEXT_BOOST) : DEFAULT_TEXT_BOOST;
+}
 
 type HitRow = {
   doc_id: string;
@@ -91,7 +102,7 @@ async function corpusState(model: ModelSpec): Promise<{
 
 async function handleStatus(res: ServerResponse): Promise<void> {
   const model = defaultModel();
-  const state = await corpusState(model);
+  const [state, elasticsearch] = await Promise.all([corpusState(model), esStatus(model)]);
   sendJson(res, 200, {
     model: model.alias,
     modelId: model.id,
@@ -100,6 +111,7 @@ async function handleStatus(res: ServerResponse): Promise<void> {
     database: describeTarget(),
     ...state,
     ready: state.vectors > 0,
+    elasticsearch,
   });
 }
 
@@ -108,7 +120,7 @@ async function handleSearch(
   res: ServerResponse,
 ): Promise<void> {
   const raw = await readBody(req);
-  let parsed: { query?: unknown; k?: unknown };
+  let parsed: { query?: unknown; k?: unknown; engine?: unknown; textBoost?: unknown };
   try {
     parsed = JSON.parse(raw || "{}");
   } catch {
@@ -147,6 +159,38 @@ async function handleSearch(
   const vector = await embedOne(model, "query", query);
   const embedMs = Date.now() - t0;
 
+  const engine = parseEngine(parsed.engine);
+  if (engine === "hybrid") {
+    const textBoost = parseTextBoost(parsed.textBoost);
+    const { hits, took, searchMs } = await esHybrid(model, vector, query, k, textBoost);
+    return sendJson(res, 200, {
+      query,
+      engine,
+      textBoost,
+      model: model.alias,
+      modelId: model.id,
+      dim: vector.length,
+      embedMs,
+      searchMs,
+      took,
+      hits: await withMeta(hits),
+    });
+  }
+  if (engine === "elasticsearch") {
+    const { hits, took, searchMs } = await esKnn(model, vector, k);
+    return sendJson(res, 200, {
+      query,
+      engine,
+      model: model.alias,
+      modelId: model.id,
+      dim: vector.length,
+      embedMs,
+      searchMs,
+      took,
+      hits: await withMeta(hits),
+    });
+  }
+
   const t1 = Date.now();
   const { rows } = await getPool().query<HitRow>(
     `SELECT d.id::text AS doc_id,
@@ -164,6 +208,7 @@ async function handleSearch(
 
   sendJson(res, 200, {
     query,
+    engine,
     model: model.alias,
     modelId: model.id,
     dim: vector.length,
@@ -217,7 +262,7 @@ async function handleRecommend(
   res: ServerResponse,
 ): Promise<void> {
   const raw = await readBody(req);
-  let parsed: { docIds?: unknown; k?: unknown; includeBasis?: unknown };
+  let parsed: { docIds?: unknown; k?: unknown; includeBasis?: unknown; engine?: unknown };
   try {
     parsed = JSON.parse(raw || "{}");
   } catch {
@@ -253,6 +298,12 @@ async function handleRecommend(
 
   const model = defaultModel();
   const pool = getPool();
+
+  // Hybrid braucht Suchtext; Empfehlungen haben keinen und laufen dann als
+  // reines kNN über Elasticsearch.
+  if (parseEngine(parsed.engine) !== "pgvector") {
+    return recommendWithEs(res, model, docIds, k, includeBasis);
+  }
 
   // Welche der angefragten Produkte haben überhaupt einen Vektor für dieses
   // Modell? Ein stillschweigend ignoriertes Produkt würde das Ergebnis
@@ -304,6 +355,7 @@ async function handleRecommend(
   const searchMs = Date.now() - t0;
 
   sendJson(res, 200, {
+    engine: "pgvector",
     model: model.alias,
     modelId: model.id,
     basis: basisRows.map((r) => ({ docId: r.doc_id, name: r.meta.name })),
@@ -319,6 +371,50 @@ async function handleRecommend(
   });
 }
 
+/**
+ * Empfehlung über Elasticsearch: Zentroid in Node bilden (Elasticsearch kann
+ * nicht über Vektoren mitteln), dann kNN. Die Ausgangsprodukte schließt ein
+ * Filter aus, der während der Graphsuche greift — es kommen trotzdem k Treffer.
+ */
+async function recommendWithEs(
+  res: ServerResponse,
+  model: ModelSpec,
+  docIds: string[],
+  k: number,
+  includeBasis: boolean,
+): Promise<void> {
+  const t0 = Date.now();
+  const { vector, found, missing } = await esCentroid(model, docIds);
+  if (!vector) {
+    return sendJson(res, 404, {
+      error:
+        `Für keine der angegebenen doc_ids liegt in Elasticsearch ein Vektor von ${model.alias} vor.\n` +
+        `Nicht gefunden: ${missing.join(", ")}`,
+      missing,
+    });
+  }
+
+  const { hits, took } = await esKnn(model, vector, k, includeBasis ? [] : found);
+  const searchMs = Date.now() - t0;
+
+  const { rows: basisRows } = await getPool().query<{ doc_id: string; meta: ProductMeta }>(
+    "SELECT id::text AS doc_id, meta FROM documents WHERE id = ANY($1::bigint[]) ORDER BY id",
+    [found],
+  );
+
+  sendJson(res, 200, {
+    engine: "elasticsearch",
+    model: model.alias,
+    modelId: model.id,
+    basis: basisRows.map((r) => ({ docId: r.doc_id, name: r.meta.name })),
+    missing,
+    includeBasis,
+    searchMs,
+    took,
+    hits: await withMeta(hits),
+  });
+}
+
 export function searchPlugin(): Plugin {
   return {
     name: "ai-embed-search",
@@ -330,6 +426,8 @@ export function searchPlugin(): Plugin {
         "OPENROUTER_API_KEY",
         "DATABASE_URL",
         "EMBEDDING_MODEL",
+        "ES_URL",
+        "ES_INDEX",
       ]) {
         if (env[key] && !process.env[key]) process.env[key] = env[key];
       }

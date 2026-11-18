@@ -1,8 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getProducts, getStatus } from './api.js'
+import { ENGINES, getProducts, getStatus } from './api.js'
 import { TextSearch } from './TextSearch.jsx'
 import { Recommend } from './Recommend.jsx'
 import './search.css'
+
+const ENGINE_KEY = 'ai_embed.engine'
+
+/** Gewählte Suchmaschine überlebt ein Neuladen; ohne Storage eben pgvector. */
+function readEngine() {
+  try {
+    const stored = localStorage.getItem(ENGINE_KEY)
+    return stored in ENGINES ? stored : 'pgvector'
+  } catch {
+    return 'pgvector'
+  }
+}
 
 /**
  * Hülle für beide Suchen. Die Auswahl der Ausgangsprodukte liegt hier und nicht
@@ -15,6 +27,16 @@ export function SearchApp() {
   const [statusError, setStatusError] = useState(null)
   const [products, setProducts] = useState([])
   const [basis, setBasis] = useState([])
+  const [engine, setEngine] = useState(readEngine)
+
+  const chooseEngine = useCallback((next) => {
+    setEngine(next)
+    try {
+      localStorage.setItem(ENGINE_KEY, next)
+    } catch {
+      // Storage gesperrt: Auswahl gilt dann nur bis zum Neuladen.
+    }
+  }, [])
 
   useEffect(() => {
     getStatus().then(setStatus).catch((e) => setStatusError(e.message))
@@ -39,6 +61,7 @@ export function SearchApp() {
       <header className="kopf">
         <h1>Produktsuche</h1>
         <ModellZeile status={status} fehler={statusError} />
+        <EngineSchalter engine={engine} onChange={chooseEngine} status={status} />
       </header>
 
       <nav className="reiter" role="tablist">
@@ -64,9 +87,10 @@ export function SearchApp() {
       </nav>
 
       {tab === 'text' ? (
-        <TextSearch basis={basis} onAdd={addToBasis} />
+        <TextSearch basis={basis} onAdd={addToBasis} engine={engine} />
       ) : (
         <Recommend
+          engine={engine}
           products={products}
           basis={basis}
           setBasis={setBasis}
@@ -74,6 +98,49 @@ export function SearchApp() {
         />
       )}
     </main>
+  )
+}
+
+/**
+ * Umschalter zwischen den Suchmaschinen. Der Query-Vektor kommt in beiden
+ * Fällen vom selben Modell; verglichen wird nur, wer rankt.
+ */
+function EngineSchalter({ engine, onChange, status }) {
+  const es = status?.elasticsearch
+
+  return (
+    <div className="engine">
+      <div className="engine-wahl" role="radiogroup" aria-label="Suchmaschine">
+        {Object.entries(ENGINES).map(([key, { label, title }]) => (
+          <button
+            key={key}
+            type="button"
+            role="radio"
+            aria-checked={engine === key}
+            className={engine === key ? 'aktiv' : ''}
+            title={title}
+            onClick={() => onChange(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {engine === 'elasticsearch' && es && (
+        es.available ? (
+          <span className="engine-info">
+            Index <code>{es.index}</code> · {es.documents} Dokumente ·{' '}
+            {es.dims === null ? (
+              <span className="warntext">kein Feld {es.field}, sync.ts laufen lassen</span>
+            ) : (
+              <code>{es.indexType}</code>
+            )}
+          </span>
+        ) : (
+          <pre className="engine-info warntext">{es.reason}</pre>
+        )
+      )}
+    </div>
   )
 }
 

@@ -93,12 +93,46 @@ dass die Vektoren auf Länge 1 normiert sind — nachgemessen, min = max = 1.0.
 Bei unnormierten Vektoren würden längere Vektoren die Richtung still
 dominieren; dann müsste vor dem Mitteln `l2_normalize()` stehen.
 
+**Suchmaschine** — der Schalter im Kopf wählt, wer rankt: pgvector (exakter
+Seq-Scan), Elasticsearch (kNN auf HNSW) oder ES hybrid (Volltext-BM25 und kNN
+in einem Request, Scores addiert). Embedding-Modell und Query-Vektor sind
+dieselben; beim Umschalten wird die letzte Suche wiederholt.
+
+Bei ES hybrid regelt das **Text-Gewicht**, wie stark Wortübereinstimmung
+zählt. Der kNN-Score liegt zwischen 0 und 1, BM25 schnell bei 5–15, deshalb
+ist der Standard 0,1. Für „ich will eine Wand im Wohnzimmer streichen":
+
+| Text-Gewicht | Platz 1 | Auffällig |
+|---|---|---|
+| 0 | Schöner Wohnen Trendfarbe | gleich wie reines kNN |
+| 0,1 | Storch Malerwalzen-Set | „streichen" im Text zieht die Walze nach vorn |
+| 1 | Storch Malerwalzen-Set | Laminat und Tiefgrund rutschen rein, Wortgleichheit dominiert |
+
+Die Trefferkarten zeigen dann den Score statt der Distanz, der Balken ist
+relativ zum besten Treffer. Der robustere `rrf`-Retriever (Rangfusion) ist in
+der Basic-Lizenz von Elasticsearch gesperrt. Empfehlungen haben keinen
+Suchtext und laufen bei ES hybrid als reines Elasticsearch-kNN. Für
+Elasticsearch muss der Index aus
+[`elasticsearch/vector`](../elasticsearch/vector/README.md) per `sync.ts`
+befüllt sein. Elasticsearch liefert nur das Ranking, die Anzeigedaten kommen
+aus `documents.meta`. Für Empfehlungen wird der Zentroid im Server gebildet,
+weil Elasticsearch nicht über Vektoren mitteln kann.
+
+Bei der Textsuche weichen die Distanzen zwischen zwei Läufen in der dritten
+Nachkommastelle ab, auch bei gleicher Suchmaschine: jeder Lauf bettet die
+Anfrage neu ein, und OpenRouter liefert dabei nicht bitgenau denselben Vektor.
+Bei Empfehlungen (kein Embedding-Aufruf) sind beide Suchmaschinen identisch.
+
 | Route | |
 |---|---|
-| `GET /api/status` | aktives Modell, Dimension, Größe des indexierten Korpus |
+| `GET /api/status` | aktives Modell, Dimension, Größe des indexierten Korpus, Zustand des Elasticsearch-Index |
 | `GET /api/products` | alle Produkte mit `doc_id` als Auswahlliste |
-| `POST /api/search` | `{ query, k }` → Treffer, Embedding- und DB-Dauer getrennt |
-| `POST /api/recommend` | `{ docIds, k, includeBasis }` → Treffer zum Zentroid |
+| `POST /api/search` | `{ query, k, engine, textBoost }` → Treffer, Embedding- und Suchdauer getrennt |
+| `POST /api/recommend` | `{ docIds, k, includeBasis, engine }` → Treffer zum Zentroid |
+
+`engine` ist `pgvector` (Standard), `elasticsearch` oder `hybrid`;
+`textBoost` (Standard 0,1) gilt nur für `hybrid`. `ES_URL` und
+`ES_INDEX` in `.env` überschreiben `http://127.0.0.1:9200` und `ai_embed_docs`.
 
 ## Kommandozeile
 
