@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { postSearch } from './api.js'
+import { ENGINES, TEXT_BOOSTS, postSearch } from './api.js'
 import { ResultCard } from './ResultCard.jsx'
 
 /** Anfragen, die zeigen, was semantische Suche kann und Stichwortsuche nicht. */
@@ -11,9 +11,10 @@ const BEISPIELE = [
   'etwas gegen Lärm beim Flexen',
 ]
 
-export function TextSearch({ basis, onAdd }) {
+export function TextSearch({ basis, onAdd, engine }) {
   const [query, setQuery] = useState('')
   const [k, setK] = useState(10)
+  const [textBoost, setTextBoost] = useState(0.1)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -21,6 +22,8 @@ export function TextSearch({ basis, onAdd }) {
   // Verhindert, dass eine langsame frühere Antwort eine neuere überschreibt.
   const runId = useRef(0)
   const inputRef = useRef(null)
+  // Zuletzt gestellte Anfrage, für die Wiederholung beim Umschalten.
+  const lastQuery = useRef('')
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -32,10 +35,11 @@ export function TextSearch({ basis, onAdd }) {
       if (!trimmed) return
 
       const id = ++runId.current
+      lastQuery.current = trimmed
       setLoading(true)
       setError(null)
       try {
-        const data = await postSearch(trimmed, k)
+        const data = await postSearch(trimmed, k, engine, textBoost)
         if (id === runId.current) setResult(data)
       } catch (e) {
         if (id === runId.current) {
@@ -46,8 +50,20 @@ export function TextSearch({ basis, onAdd }) {
         if (id === runId.current) setLoading(false)
       }
     },
-    [k],
+    [k, engine, textBoost],
   )
+
+  // Beim Umschalten der Suchmaschine dieselbe Anfrage noch einmal stellen,
+  // damit sich die Listen direkt vergleichen lassen. Nur auf engine reagieren,
+  // nicht auf jede neue search-Funktion (die ändert sich auch mit k).
+  const searchRef = useRef(search)
+  useEffect(() => {
+    searchRef.current = search
+  }, [search])
+  // Ebenso beim Ändern des Text-Gewichts: genau dafür ist der Regler da.
+  useEffect(() => {
+    if (lastQuery.current) searchRef.current(lastQuery.current)
+  }, [engine, textBoost])
 
   return (
     <>
@@ -83,6 +99,24 @@ export function TextSearch({ basis, onAdd }) {
             ))}
           </select>
         </label>
+        {engine === 'hybrid' && (
+          <label
+            className="treffer-anzahl"
+            title="Gewicht des Volltext-Anteils (BM25). 0 = reines kNN. BM25-Scores liegen schnell bei 5–15, kNN-Scores zwischen 0 und 1."
+          >
+            Text-Gewicht
+            <select
+              value={textBoost}
+              onChange={(e) => setTextBoost(Number(e.target.value))}
+            >
+              {TEXT_BOOSTS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <button type="submit" disabled={loading || !query.trim()}>
           {loading ? 'Sucht…' : 'Suchen'}
         </button>
@@ -123,8 +157,10 @@ export function TextSearch({ basis, onAdd }) {
                 Embedding-API {result.embedMs} ms
               </span>
               <span className="trenner">·</span>
-              <span title="Vektorvergleich in Postgres">
-                Datenbank {result.searchMs} ms
+              <span title={ENGINES[result.engine]?.title}>
+                {ENGINES[result.engine]?.label ?? 'Datenbank'} {result.searchMs} ms
+                {result.took !== undefined && ` (intern ${result.took} ms)`}
+                {result.textBoost !== undefined && `, Text-Gewicht ${result.textBoost}`}
               </span>
               <span className="trenner">·</span>
               <span className="anteil">
@@ -148,6 +184,7 @@ export function TextSearch({ basis, onAdd }) {
                   rang={index + 1}
                   onAdd={onAdd}
                   inBasis={basis.includes(hit.docId)}
+                  maxScore={result.hits[0]?.score}
                 />
               ))}
             </ol>

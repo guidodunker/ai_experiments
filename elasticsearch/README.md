@@ -190,6 +190,7 @@ docker compose start logstash
 | `logstash/templates/products.json` | Index template (field types of the `products` index)     |
 | `search-ui/index.html`             | Search page, no external dependencies                    |
 | `search-ui/nginx.conf`             | Serves the page, read-only proxy to `products/_search`   |
+| `vector/`                          | Vector search experiment: pgvector vs. Elasticsearch kNN on the `ai_embed` corpus, see [vector/README.md](vector/README.md) |
 
 ## Troubleshooting
 

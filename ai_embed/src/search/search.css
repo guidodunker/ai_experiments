@@ -555,3 +555,60 @@
   border-color: var(--accent-border);
   cursor: default;
 }
+/* --- Suchmaschinen-Schalter ---------------------------------------------- */
+
+.engine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-block-start: 12px;
+  font-size: 13px;
+}
+
+.engine-wahl {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.engine-wahl button {
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  border: none;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+.engine-wahl button + button {
+  border-inline-start: 1px solid var(--border);
+}
+
+.engine-wahl button:hover:not(.aktiv) {
+  color: var(--text-h);
+}
+
+.engine-wahl button.aktiv {
+  color: #fff;
+  background: var(--accent);
+}
+
+.engine-info code {
+  font-size: 12px;
+  padding: 1px 5px;
+}
+
+pre.engine-info {
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  margin: 0;
+  flex: 1 1 100%;
+}
+
+.warntext {
+  color: var(--accent);
+}

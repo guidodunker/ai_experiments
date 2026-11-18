@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
-import { postRecommend } from './api.js'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ENGINES, postRecommend } from './api.js'
 import { ResultCard } from './ResultCard.jsx'
 
 /** "105, 106 107" → ["105","106","107"], ohne Duplikate, nur positive Zahlen. */
@@ -14,7 +14,7 @@ function parseDocIds(text) {
   ]
 }
 
-export function Recommend({ products, basis, setBasis, onRemove }) {
+export function Recommend({ engine, products, basis, setBasis, onRemove }) {
   const [rohEingabe, setRohEingabe] = useState('')
   const [k, setK] = useState(10)
   const [includeBasis, setIncludeBasis] = useState(false)
@@ -46,14 +46,26 @@ export function Recommend({ products, basis, setBasis, onRemove }) {
     setLoading(true)
     setError(null)
     try {
-      setResult(await postRecommend(basis, k, includeBasis))
+      setResult(await postRecommend(basis, k, includeBasis, engine))
     } catch (e) {
       setError(e.message)
       setResult(null)
     } finally {
       setLoading(false)
     }
-  }, [basis, k, includeBasis])
+  }, [basis, k, includeBasis, engine])
+
+  // Beim Umschalten der Suchmaschine neu suchen, wenn schon ein Ergebnis da
+  // ist. Kostet keinen API-Aufruf, die Vektoren liegen im Korpus.
+  const suchenRef = useRef(suchen)
+  const hatErgebnis = useRef(false)
+  useEffect(() => {
+    suchenRef.current = suchen
+    hatErgebnis.current = result !== null
+  }, [suchen, result])
+  useEffect(() => {
+    if (hatErgebnis.current) suchenRef.current()
+  }, [engine])
 
   return (
     <>
@@ -62,6 +74,10 @@ export function Recommend({ products, basis, setBasis, onRemove }) {
         Mittelwert gebildet, und mit diesem Vektor wird gesucht. Dafür ist{' '}
         <strong>kein Aufruf beim Embedding-Modell nötig</strong> — die Vektoren
         liegen bereits im Korpus, die Suche kostet nur den Datenbankdurchlauf.
+        {engine !== 'pgvector' &&
+          ' Elasticsearch kann nicht über Vektoren mitteln: der Mittelwert wird im Server gebildet und dann als kNN-Anfrage geschickt.'}
+        {engine === 'hybrid' &&
+          ' Hybrid braucht Suchtext, den es hier nicht gibt; Empfehlungen laufen deshalb als reines Elasticsearch-kNN.'}
       </p>
 
       <form
@@ -179,8 +195,9 @@ export function Recommend({ products, basis, setBasis, onRemove }) {
             <span className="zeiten">
               <span className="anteil">keine Embedding-API</span>
               <span className="trenner">·</span>
-              <span title="Zentroid bilden und vergleichen, alles in Postgres">
-                Datenbank {result.searchMs} ms
+              <span title={ENGINES[result.engine]?.title}>
+                {ENGINES[result.engine]?.label ?? 'Datenbank'} {result.searchMs} ms
+                {result.took !== undefined && ` (intern ${result.took} ms)`}
               </span>
             </span>
           </div>
