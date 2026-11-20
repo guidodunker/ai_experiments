@@ -1,0 +1,32 @@
+import type { z } from 'zod'
+import type { ChatEvent, State } from '../types.ts'
+
+/** Was ein Tool vom Agenten bekommt. Das LLM sieht davon nichts. */
+export type ToolContext = {
+  event: ChatEvent
+  state: State
+  ticketDir: string
+  /** Schreibt den Zustand sofort auf die Platte. */
+  persist: () => Promise<void>
+  now: () => Date
+}
+
+/**
+ * Ein Tool unabhängig vom LLM-SDK. `llm.ts` übersetzt es in ein
+ * OpenRouter-Tool; Tests rufen `execute` direkt auf.
+ */
+export type AgentTool = {
+  name: string
+  description: string
+  inputSchema: z.ZodObject
+  execute: (input: never, ctx: ToolContext) => Promise<unknown>
+}
+
+export function defineTool<S extends z.ZodObject>(tool: {
+  name: string
+  description: string
+  inputSchema: S
+  execute: (input: z.infer<S>, ctx: ToolContext) => Promise<unknown>
+}): AgentTool & { execute: (input: z.infer<S>, ctx: ToolContext) => Promise<unknown> } {
+  return tool
+}
