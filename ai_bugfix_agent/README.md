@@ -17,9 +17,11 @@ Zeilen ohne Präfix gehören zum vorigen Post.
 npm install
 cp .env.example .env   # OPENROUTER_API_KEY eintragen
 npm start              # verarbeitet alles Neue und beendet sich
-npm start -- --watch   # beobachtet chat.txt dauerhaft
+npm run watch          # beobachtet chat.txt dauerhaft (Strg+C beendet)
 npm test
 ```
+
+`npm start -- --watch` funktioniert in PowerShell nicht: PowerShell entfernt das `--`, und npm behält `--watch` für sich.
 
 Der Agent merkt sich in `state.json`, was er schon verarbeitet hat. Löschen von `state.json` und `tickets/` setzt ihn zurück.
 

@@ -65,7 +65,7 @@ Alle Pfade gelten relativ zu `ai_bugfix_agent/`.
 | `src/tools/index.ts` | Liste der Tools, die der Agent erhält | – |
 | `src/prompt.md` | System-Prompt mit der Beschreibung der Verhalten | – |
 | `src/agent.ts` | `handleEvent(event, context, deps)`. Ruft das LLM mit Prompt, Ereignis, Thread-Kontext und Tools auf. Der Modell-Aufruf wird über `deps` injiziert. | ja |
-| `src/main.ts` | CLI: `npm start` für einen Lauf, `npm start -- --watch` für den Dauerbetrieb | – |
+| `src/main.ts` | CLI: `npm start` für einen Lauf, `npm run watch` für den Dauerbetrieb (übergibt `--watch`) | – |
 
 ### Datentypen
 
