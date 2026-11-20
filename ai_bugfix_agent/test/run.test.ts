@@ -81,6 +81,20 @@ test('Modellfehler bricht ab, nächster Lauf wiederholt ohne doppeltes Ticket', 
   await assert.rejects(readFile(join(dir, 'tickets', 'bug_2.txt'), 'utf8'))
 })
 
+test('halb getippter Top-Post ohne Ticket wird nach Fertigstellung zum Ticket', async () => {
+  const { deps, dir } = await setup('> Tipp\n>> gesehen\n')
+  await runOnce(deps)
+  await writeFile(join(dir, 'chat.txt'), '> Tippfehler Bug auf der Startseite\n>> gesehen\n')
+  await runOnce(deps)
+  const ticket = await readFile(join(dir, 'tickets', 'bug_1.txt'), 'utf8')
+  assert.match(ticket, /> Tippfehler Bug auf der Startseite/)
+  assert.match(ticket, /\(Antwort, Ebene 2\)\ngesehen\n$/)
+  const state = JSON.parse(await readFile(deps.statePath, 'utf8'))
+  assert.deepEqual(state.threads[0].replyCount, 1)
+  await runOnce(deps)
+  assert.equal((await readFile(join(dir, 'tickets', 'bug_1.txt'), 'utf8')).match(/### /g)?.length, 1)
+})
+
 test('geänderter Top-Post wird gemeldet', async () => {
   const { deps, dir, logs } = await setup('> Bug A\n')
   await runOnce(deps)

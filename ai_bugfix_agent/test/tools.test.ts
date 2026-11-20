@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { hashText } from '../src/state.ts'
 import { appendToTicketTool } from '../src/tools/append_to_ticket.ts'
 import { createTicketTool } from '../src/tools/create_ticket.ts'
 import type { ToolContext } from '../src/tools/types.ts'
@@ -36,6 +37,13 @@ test('create_ticket legt Ticket an und speichert die Nummer sofort', async () =>
   assert.equal(ctx.state.threads[0]?.ticket, 1)
   assert.equal(persisted(), 1)
   assert.match(await readFile(join(ctx.ticketDir, 'bug_1.txt'), 'utf8'), /^titel: Login schlägt fehl$/m)
+})
+
+test('create_ticket bei Neubewertung speichert neuen Hash und offene Antworten', async () => {
+  const { ctx } = await context({ kind: 'NewThread', thread })
+  ctx.state.threads[0] = { topHash: hashText('Login'), replyCount: 1, ticket: null }
+  await createTicketTool.execute(input, ctx)
+  assert.deepEqual(ctx.state.threads[0], { topHash: hashText('Login geht nicht'), replyCount: 0, ticket: 1 })
 })
 
 test('create_ticket lehnt ein zweites Ticket für denselben Thread ab', async () => {

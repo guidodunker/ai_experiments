@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { ensureThread } from '../state.ts'
+import { ensureThread, hashText } from '../state.ts'
 import { createTicket } from '../tickets.ts'
 import { defineTool } from './types.ts'
 
@@ -22,6 +22,9 @@ export const createTicketTool = defineTool({
     }
     const id = await createTicket(ctx.ticketDir, ctx.event.thread, input, ctx.now())
     entry.ticket = id
+    // Das Ticket gilt für diesen Text; seine Antworten sind noch nicht angehängt.
+    entry.topHash = hashText(ctx.event.thread.top.text)
+    entry.replyCount = 0
     // Sofort speichern, damit ein Abbruch danach kein zweites Ticket erzeugt.
     await ctx.persist()
     return { ticket: id }

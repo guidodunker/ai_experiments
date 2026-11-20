@@ -32,6 +32,12 @@ test('ensureThread legt Eintrag an und liefert danach denselben', () => {
   assert.equal(ensureThread(state, thread), entry)
 })
 
+test('applyEvent bei NewThread übernimmt neuen Hash und setzt Antworten zurück', () => {
+  const state: State = { threads: [{ topHash: hashText('B'), replyCount: 2, ticket: 9 }] }
+  applyEvent(state, { kind: 'NewThread', thread })
+  assert.deepEqual(state.threads[0], { topHash: hashText('Bug'), replyCount: 0, ticket: 9 })
+})
+
 test('applyEvent zählt Antworten hoch', () => {
   const state: State = { threads: [] }
   applyEvent(state, { kind: 'NewThread', thread })

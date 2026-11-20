@@ -33,10 +33,21 @@ test('nichts Neues ergibt keine Ereignisse', () => {
   assert.deepEqual(diff([thread], state), { events: [], warnings: [] })
 })
 
-test('geänderter Top-Post ergibt Warnung statt Ereignissen', () => {
-  const state: State = { threads: [{ topHash: hashText('anders'), replyCount: 0, ticket: null }] }
+test('geänderter Top-Post mit Ticket ergibt Warnung statt Ereignissen', () => {
+  const state: State = { threads: [{ topHash: hashText('anders'), replyCount: 0, ticket: 4 }] }
   const { events, warnings } = diff([thread], state)
   assert.deepEqual(events, [])
   assert.equal(warnings.length, 1)
-  assert.match(warnings[0]!, /Thread 0/)
+  assert.match(warnings[0]!, /Thread 0: Top-Post wurde geändert/)
+})
+
+test('geänderter Top-Post ohne Ticket wird mit allen Antworten neu bewertet', () => {
+  const state: State = { threads: [{ topHash: hashText('Bu'), replyCount: 2, ticket: null }] }
+  const { events, warnings } = diff([thread], state)
+  assert.deepEqual(
+    events.map((e) => (e.kind === 'NewReply' ? `reply:${e.replyIndex}` : e.kind)),
+    ['NewThread', 'reply:0', 'reply:1'],
+  )
+  assert.equal(warnings.length, 1)
+  assert.match(warnings[0]!, /Thread 0: .*neu bewertet/)
 })

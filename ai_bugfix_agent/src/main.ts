@@ -6,7 +6,8 @@ import { createSerialRunner, watchChat } from './watch.ts'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const MODEL = process.env.OPENROUTER_MODEL ?? '~anthropic/claude-haiku-latest'
-const DEBOUNCE_MS = 500
+/** Editoren speichern auch halb getippte Zeilen; erst nach einer Tipp-Pause auswerten. */
+const DEBOUNCE_MS = 3000
 
 function log(message: string): void {
   process.stderr.write(`${message}\n`)

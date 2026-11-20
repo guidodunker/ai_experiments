@@ -21,7 +21,7 @@ Enthalten:
 Nicht enthalten:
 
 - Arbeitsschritte nach dem Ticket (Analyse, Plan, Fix, Git, MR). Die Schnittstelle ist unten festgelegt, implementiert wird sie nicht.
-- Erneute Bug-Erkennung, wenn ein Top-Post nachträglich geändert wird
+- Erneute Bug-Erkennung für einen geänderten Top-Post, zu dem es schon ein Ticket gibt
 
 ## Chat-Format
 
@@ -89,7 +89,9 @@ Für jeden Thread im Chat:
 
 - Thread-Index ohne Eintrag im Zustand: ein Ereignis `NewThread`, danach ein `NewReply` für jede bereits vorhandene Antwort.
 - Bekannter Thread mit passendem Hash und mehr Antworten als `replyCount`: ein `NewReply` für jede neue Antwort.
-- Bekannter Thread mit abweichendem Hash: eine Warnung, keine Ereignisse.
+- Bekannter Thread mit abweichendem Hash und Ticket: eine Warnung, keine Ereignisse.
+- Bekannter Thread mit abweichendem Hash ohne Ticket: ein Hinweis, dann wie bei einem unbekannten Thread `NewThread` und ein `NewReply` für jede Antwort. Grund: Im Watch-Modus speichert der Editor oft einen halb getippten Top-Post, der beim ersten Mal nicht als Bug erkennbar war.
+- Bei `NewThread` übernimmt der Zustand den neuen Hash und setzt `replyCount` auf 0. Dasselbe tut `create_ticket`, damit ein Abbruch direkt nach dem Anlegen des Tickets keine Antworten verliert.
 
 ### Agent
 
@@ -174,8 +176,8 @@ Offene Frage für später: Ist das Ziel-Repo für Fixes dieses Repo oder ein kon
 
 - **LLM-Fehler oder Timeout:** Der Zustand ist bis zum letzten erfolgreichen Ereignis gespeichert. Der Lauf bricht mit einer Fehlermeldung und Exit-Code 1 ab. Der nächste Lauf versucht das Ereignis erneut. Doppelte Tickets verhindert die Sperre in `create_ticket`.
 - **Schrittlimit erreicht** (`stepCountIs(4)`): Warnung, das Ereignis gilt als verarbeitet.
-- **Top-Post geändert:** Warnung aus `diff`, keine Ereignisse für diesen Thread.
-- **Watch-Modus:** `fs.watch` auf `chat.txt` mit 500 ms Debounce. Fehler werden geloggt und der Watcher läuft weiter. Läuft gerade ein Durchgang, wird genau ein weiterer vorgemerkt, nie zwei parallel.
+- **Top-Post geändert:** Mit Ticket gibt `diff` eine Warnung aus und erzeugt keine Ereignisse. Ohne Ticket wird der Thread neu bewertet (siehe diff).
+- **Watch-Modus:** `fs.watch` auf `chat.txt` mit 3 s Debounce, damit halb getippte Zeilen seltener ausgewertet werden. Fehler werden geloggt und der Watcher läuft weiter. Läuft gerade ein Durchgang, wird genau ein weiterer vorgemerkt, nie zwei parallel.
 - **Fehlende `chat.txt`:** Fehlermeldung und Exit-Code 1. Im Watch-Modus wird auf das Anlegen der Datei gewartet.
 
 ## Tests

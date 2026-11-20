@@ -40,7 +40,11 @@ export function ensureThread(state: State, thread: Thread): ThreadState {
 /** Vermerkt ein verarbeitetes Ereignis im Zustand. */
 export function applyEvent(state: State, event: ChatEvent): void {
   const entry = ensureThread(state, event.thread)
-  if (event.kind === 'NewReply') {
+  if (event.kind === 'NewThread') {
+    // Bei einer Neubewertung gilt ab jetzt der neue Text; die Antworten folgen als eigene Ereignisse.
+    entry.topHash = hashText(event.thread.top.text)
+    entry.replyCount = 0
+  } else {
     entry.replyCount = Math.max(entry.replyCount, event.replyIndex + 1)
   }
 }
