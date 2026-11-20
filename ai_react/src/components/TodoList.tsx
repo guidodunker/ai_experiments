@@ -3,15 +3,15 @@ import { useState, useEffect } from 'react'
 interface Todo { id: number; text: string; completed: boolean }
 const STORAGE_KEY = 'todos'
 const COLORS = {
-  primary: '#3b82f6', // blue-500
-  secondary: '#60a5fa', // blue-400
-  background: '#e0f2fe', // light blue background
-  text: '#1e3a8a', // blue-800
+  primary: '#ff3b82', // red-500
+  secondary: '#ff60a5', // pinkish
+  background: '#ffe0e0', // light red background
+  text: '#1e3a8a', // blue-800 remains
   textMuted: '#93c5fd', // blue-300
-  border: '#60a5fa', // blue-400
+  border: '#ff60a5', // pinkish
   success: '#10b981', // green-500
   error: '#ef4444', // red-500
-  card: '#e0f2fe', // blue-100
+  card: '#ffe0e0', // light red
 }
 
 const EXAMPLE_TODOS: Todo[] = [
@@ -42,7 +42,7 @@ export function TodoList({ demo = false }: { demo?: boolean }) {
         <h1 style={{ color: COLORS.text, marginBottom: '30px', fontSize: '32px', fontWeight: '700' }}>📝 TODO Liste</h1>
         <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
           <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyPress} placeholder="Neues TODO hinzufügen..." style={{ flex: 1, padding: '12px 16px', fontSize: '14px', backgroundColor: COLORS.card, border: `2px solid ${COLORS.border}`, borderRadius: '8px', color: COLORS.text }} />
-          <button onClick={addTodo} style={{ padding: '12px 24px', backgroundColor: COLORS.primary, color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}>Hinzufügen</button>
+          <button onClick={addTodo} style={{ padding: '12px 24px', backgroundColor: COLORS.primary, color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', boxShadow: '0 4px 12px rgba(255, 59, 130, 0.3)' }}>Hinzufügen</button>
         </div>
         <div>
           {todos.length === 0 ? (
