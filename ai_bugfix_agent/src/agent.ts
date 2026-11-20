@@ -18,12 +18,15 @@ export type BoundTool = {
   execute: (input: unknown) => Promise<unknown>
 }
 
-/** Führt den Tool-Loop mit dem LLM aus. In Tests ein Fake, sonst `openRouterModel`. */
+/**
+ * Führt den Tool-Loop mit dem LLM aus und liefert den Schlusssatz des Modells
+ * (was es getan hat und warum). In Tests ein Fake, sonst `openRouterModel`.
+ */
 export type RunModel = (request: {
   instructions: string
   input: string
   tools: BoundTool[]
-}) => Promise<void>
+}) => Promise<string | void>
 
 export type AgentDeps = {
   state: State
@@ -72,7 +75,10 @@ export async function handleEvent(event: ChatEvent, deps: AgentDeps): Promise<vo
   }))
 
   const ticket = deps.state.threads[event.thread.index]?.ticket ?? null
-  await deps.runModel({ instructions: PROMPT, input: describeEvent(event, ticket), tools })
+  const answer = await deps.runModel({ instructions: PROMPT, input: describeEvent(event, ticket), tools })
+  if (typeof answer === 'string' && answer.trim() !== '') {
+    deps.log(`Thread ${event.thread.index} → ${answer.trim().replace(/\s*\n\s*/g, ' ')}`)
+  }
 
   if (calls >= MAX_STEPS) {
     deps.log(`Warnung: Schrittlimit (${MAX_STEPS}) bei Thread ${event.thread.index} ausgeschöpft.`)

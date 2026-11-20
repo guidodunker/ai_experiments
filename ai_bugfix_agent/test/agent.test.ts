@@ -68,6 +68,12 @@ test('Tool-Aufruf des Modells legt Ticket an', async () => {
   assert.deepEqual(await readdir(d.ticketDir), ['bug_1.txt'])
 })
 
+test('Begründung des Modells wird mit Thread-Index geloggt', async () => {
+  const { deps: d, logs } = await deps(async () => 'Kein Ticket: Smalltalk, keine Fehlermeldung.')
+  await handleEvent(newThread, d)
+  assert.deepEqual(logs, ['Thread 2 → Kein Ticket: Smalltalk, keine Fehlermeldung.'])
+})
+
 test('Warnung, wenn das Schrittlimit ausgeschöpft wird', async () => {
   const { deps: d, logs } = await deps(async ({ tools }) => {
     const append = tools.find((t) => t.name === 'append_to_ticket')!

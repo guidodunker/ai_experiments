@@ -19,7 +19,7 @@ export function openRouterModel(apiKey: string, model: string): RunModel {
       ),
       stopWhen: stepCountIs(MAX_STEPS),
     })
-    // Wartet, bis der Tool-Loop durch ist; der Schlusssatz des Modells wird nicht gebraucht.
-    await result.getText()
+    // Wartet, bis der Tool-Loop durch ist; der Schlusssatz ist die Begründung fürs Log.
+    return result.getText()
   }
 }

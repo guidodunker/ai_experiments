@@ -8,5 +8,6 @@ node_modules/
 # Laufzeitdaten des Agenten
 state.json
 tickets/
+agent.log
 
 .idea/

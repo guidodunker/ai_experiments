@@ -1,7 +1,9 @@
+import { appendFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { openRouterModel } from './llm.ts'
 import { runOnce, type RunDeps } from './run.ts'
+import { formatTimestamp } from './tickets.ts'
 import { createSerialRunner, watchChat } from './watch.ts'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
@@ -9,8 +11,12 @@ const MODEL = process.env.OPENROUTER_MODEL ?? '~anthropic/claude-haiku-latest'
 /** Editoren speichern auch halb getippte Zeilen; erst nach einer Tipp-Pause auswerten. */
 const DEBOUNCE_MS = 3000
 
+const LOG_FILE = join(ROOT, 'agent.log')
+
+/** Konsole und agent.log; dort stehen auch die Begründungen des Modells. */
 function log(message: string): void {
   process.stderr.write(`${message}\n`)
+  appendFileSync(LOG_FILE, `${formatTimestamp(new Date())} ${message}\n`)
 }
 
 function describeError(error: unknown): string {
