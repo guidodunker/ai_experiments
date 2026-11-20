@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["es2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+
+    // Node entfernt Typen nur, statt zu kompilieren: kein enum, kein namespace,
+    // `import type` für reine Typ-Importe.
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+
+    // Relative Importe enden auf ".ts", weil Node keine Endungen umschreibt.
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

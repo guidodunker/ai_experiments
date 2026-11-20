@@ -1,0 +1,13 @@
+node_modules/
+
+# Enthält den OpenRouter-API-Key. Nie committen.
+.env
+.env.*
+!.env.example
+
+# Laufzeitdaten des Agenten
+state.json
+tickets/
+agent.log
+
+.idea/

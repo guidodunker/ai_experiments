@@ -1,0 +1,3 @@
+> Die Suche funktioniert sehr langsam mit Umlauten!.
+> Tippfehler: Blöht
+> Das ist schön!
