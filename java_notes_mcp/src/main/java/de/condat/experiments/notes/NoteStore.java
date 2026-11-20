@@ -2,6 +2,8 @@ package de.condat.experiments.notes;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -25,6 +27,10 @@ public class NoteStore {
 
     public Optional<String> find(int number) {
         return Optional.ofNullable(notes.get(number));
+    }
+
+    public SortedMap<Integer, String> all() {
+        return new TreeMap<>(notes);
     }
 
     public int count() {

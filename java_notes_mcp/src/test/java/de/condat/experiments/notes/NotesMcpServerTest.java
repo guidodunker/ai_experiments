@@ -40,9 +40,20 @@ class NotesMcpServerTest {
     }
 
     @Test
-    void listsBothTools() {
+    void listsAllTools() {
         var names = client.listTools().tools().stream().map(t -> t.name()).toList();
-        assertThat(names).contains("addNote", "getNote");
+        assertThat(names).contains("addNote", "getNote", "listNotes");
+    }
+
+    @Test
+    void listsAllNotesWithTheirNumbers() {
+        int first = Integer.parseInt(text(call("addNote", Map.of("text", "Brot backen"))));
+        int second = Integer.parseInt(text(call("addNote", Map.of("text", "Fenster putzen"))));
+
+        String list = text(call("listNotes", Map.of()));
+
+        assertThat(list).contains(first + ". Brot backen", second + ". Fenster putzen");
+        assertThat(list.indexOf(first + ". ")).isLessThan(list.indexOf(second + ". "));
     }
 
     @Test
