@@ -1,0 +1,7 @@
+> Die Suche funktioniert sehr langsam.
+>> oje
+>> Bei mir dauert jede Suche mit mehr als 1000 Treffern über 10 Sekunden.
+> Hat jemand Lust auf Mittagessen um 12?
+>> klar
+> Beim Speichern eines Profils mit Umlaut im Namen stürzt die App ab.
+> Könnten wir einen Dark Mode bekommen?
