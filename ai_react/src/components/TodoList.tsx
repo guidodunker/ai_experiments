@@ -5,7 +5,7 @@ const STORAGE_KEY = 'todos'
 const COLORS = {
   primary: '#3b82f6', // blue-500
   secondary: '#60a5fa', // blue-400
-  background: '#ffff00', // yellow background
+  background: '#e0f2fe', // light blue background
   text: '#1e3a8a', // blue-800
   textMuted: '#93c5fd', // blue-300
   border: '#60a5fa', // blue-400
