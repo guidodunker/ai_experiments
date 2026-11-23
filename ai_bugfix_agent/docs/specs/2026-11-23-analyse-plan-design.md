@@ -68,7 +68,7 @@ Alle Pfade gelten relativ zu `ai_bugfix_agent/`.
 | `src/steps/types.ts` | Typ `Step` | – |
 | `src/steps/analyze.ts` | Schritt Analysieren | ja |
 | `src/steps/plan.ts` | Schritt Planen | ja |
-| `src/steps/policy.ts` | Entscheidung für `canUseTool`: welche Tool-Aufrufe eine Sitzung ausführen darf. Reine Funktion. | nein |
+| `src/steps/policy.ts` | Entscheidung für den `PreToolUse`-Hook: welche Tool-Aufrufe eine Sitzung ausführen darf. Reine Funktion. | nein |
 | `src/steps/session.ts` | Startet eine Sitzung mit Prompt, Rechten und Schema, liefert JSON-Ergebnis und Kosten. Wird den Schritten über `deps` injiziert. | ja |
 | `src/steps/prompts/analyze.md` | Prompt der Analyse | – |
 | `src/steps/prompts/plan.md` | Prompt der Planung | – |
@@ -93,6 +93,7 @@ type StepResult = {
   status: string
   fields?: Record<string, string> // neue oder geänderte Kopffelder
   section?: { heading: string; text: string }   // wird ans Ticket angehängt
+  summary: string                 // eine Zeile für Konsole und agent.log
 }
 
 type Step = {
@@ -222,7 +223,9 @@ Beide Schritte starten die Sitzung über `session.ts` mit diesen Optionen:
 - `outputFormat`: JSON-Schema von `AnalyzeOutput` oder `PlanOutput`
 - `maxTurns`: 40 beim Analysieren, 25 beim Planen
 - `maxBudgetUsd`: `STEPS_MAX_BUDGET_USD`
-- `canUseTool`: Entscheidung aus `policy.ts`
+- `tools`: beim Analysieren Read, Grep, Glob, Write, Edit, Bash; beim Planen Read, Grep, Glob. Andere eingebaute Tools sieht das Modell nicht.
+- `permissionMode: 'dontAsk'`: Was nicht ausdrücklich erlaubt ist, wird abgelehnt.
+- `hooks.PreToolUse` mit `onFailure: 'block'`: ein Hook, der für jeden Tool-Aufruf die Entscheidung aus `policy.ts` liefert (`allow` oder `deny` mit Begründung). `canUseTool` reicht nicht, weil das SDK es nur für Aufrufe fragt, die eine Freigabe brauchen. Lesende Tools liefen daran vorbei.
 
 Regeln in `policy.ts`:
 
@@ -233,7 +236,7 @@ Regeln in `policy.ts`:
 | Bash | nur genau `TARGET_TEST_CMD` | abgelehnt |
 | alle anderen (Web, Subagenten, MCP …) | abgelehnt | abgelehnt |
 
-Ein Pfad liegt im Worktree, wenn er nach dem Auflösen von `..`, symbolischen Verweisen und relativen Anteilen mit dem Worktree-Pfad beginnt. Abgelehnte Aufrufe gehen mit Begründung an das Modell zurück und werden ins `agent.log` geschrieben.
+Ein Pfad liegt im Worktree, wenn er nach `path.resolve` gegen den Worktree gleich dem Worktree-Pfad ist oder darunter liegt. Unter Windows wird ohne Groß- und Kleinschreibung verglichen. Bei Grep und Glob gilt das für `path`; ein `pattern` von Glob darf weder absolut sein noch `..` enthalten. Symbolische Verweise im Worktree werden nicht aufgelöst; das Demo-Repo enthält keine. Abgelehnte Aufrufe gehen mit Begründung an das Modell zurück und werden ins `agent.log` geschrieben.
 
 Der Prompt stellt den Ticket-Text in einen markierten Block. Er sagt, dass der Text von Dritten stammt und als Meldung zu lesen ist. Anweisungen darin befolgt die Sitzung nicht.
 
@@ -245,7 +248,7 @@ Ticket-Texte stammen aus dem Chat, also von Dritten, und können Anweisungen an 
 
 Die Schritte laufen nativ unter Windows. Die Sandbox des Agent SDK wirkt dort nicht. Es gelten nur diese Grenzen:
 
-- `canUseTool` beschränkt Tools, Pfade und das Bash-Kommando.
+- Der `PreToolUse`-Hook beschränkt Tools, Pfade und das Bash-Kommando.
 - Die Sitzung arbeitet in einem Worktree. Der Checkout des Ziel-Repos bleibt unberührt.
 - Es wird nichts gepusht.
 
@@ -253,7 +256,7 @@ Ein ausgeführter Test kann trotzdem alles tun, was das Benutzerkonto darf: Date
 
 ## Runner
 
-`npm run steps` verarbeitet alle Tickets. `npm run steps:one` mit der Umgebungsvariable `TICKET=N` verarbeitet nur Ticket N, weil PowerShell `--` an npm nicht weitergibt.
+`npm run steps` verarbeitet alle Tickets. Ist die Umgebungsvariable `TICKET` gesetzt, nur dieses Ticket (in PowerShell: `$env:TICKET=3; npm run steps`). Eine Umgebungsvariable statt eines Arguments, weil PowerShell `--` an npm nicht weitergibt.
 
 1. Der Runner legt die Sperrdatei `steps.lock` an. Existiert sie schon, bricht er ab. Am Ende löscht er sie, auch nach einem Fehler.
 2. Er liest die Tickets in `tickets/` und sortiert sie nach Nummer.
@@ -274,16 +277,16 @@ Eingebaute Bugs, jeder ohne Test, der ihn aufdeckt:
 | Nr. | Funktion | Fehler | Meldung im Chat |
 |---|---|---|---|
 | 1 | `search` | Groß- und Kleinschreibung wird bei Umlauten nicht ignoriert: „müller“ findet „MÜLLER“ nicht. | Suche mit Kleinbuchstaben findet Müller nicht |
-| 2 | `paginate` | Ist die Anzahl ein Vielfaches der Seitengröße, fehlt der letzte Eintrag. | Bei 20 Kontakten fehlt auf der letzten Seite einer |
+| 2 | `paginate` | Auf der letzten Seite fehlt der letzte Eintrag. | Auf der letzten Seite fehlt immer der letzte Kontakt |
 | 3 | `sortByName` | Sortiert nach Codepunkten statt nach deutschem Alphabet: „Ärger“ steht hinter „Zander“. | Namen mit Ä stehen ganz am Ende |
 
-Zusätzlich enthält `chat.txt` eine Meldung ohne Gegenstück im Code: „Export nach Excel stürzt ab“. Diese Meldung muss mit `nicht_reproduziert` enden.
+Die Meldungen stehen in `demo-chat.txt` neben `package.json`, nicht in der Vorlage, damit die Sitzungen sie im Demo-Repo nicht finden. Zusätzlich enthält `demo-chat.txt` eine Meldung ohne Gegenstück im Code: „Export nach Excel stürzt ab“. Diese Meldung muss mit `nicht_reproduziert` enden.
 
 ## Fehlerbehandlung
 
 | Fall | Verhalten |
 |---|---|
-| `TARGET_REPO` fehlt oder ist kein Git-Repo | Fehlermeldung beim Start, Exit-Code 1 |
+| `TARGET_REPO` fehlt oder ist kein Git-Repo | Fehlermeldung beim Start, Exit-Code 2 wie bei fehlender Konfiguration in Stufe 1 |
 | `TARGET_BASE` existiert nicht | Schritt scheitert |
 | Branch `bugfix/bug-N` existiert bei `neu` | Schritt scheitert, Meldung nennt den Löschbefehl |
 | Basis rot | Schritt scheitert |
