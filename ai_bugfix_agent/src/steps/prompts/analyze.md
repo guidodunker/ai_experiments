@@ -8,7 +8,7 @@ Vorgehen:
 2. Schreibe einen Test, der wegen dieses Fehlers fehlschlägt. Lege ihn in eine neue Testdatei oder ergänze eine vorhandene. Ändere keine andere Datei, auch nicht den Code mit dem Fehler.
 3. Führe das Testkommando aus. Dein Test muss fehlschlagen, die übrigen Tests müssen grün bleiben.
 
-Erlaubt sind Lesen und Schreiben im Arbeitsverzeichnis und das Testkommando, wörtlich und ohne Zusätze. Andere Aufrufe werden abgelehnt.
+Erlaubt sind Lesen und Schreiben im Arbeitsverzeichnis und das Testkommando, wörtlich und ohne Zusätze. Andere Aufrufe werden abgelehnt. Nutze zum Lesen und Suchen Read, Grep und Glob statt Shell-Befehlen wie `ls` oder `cat`.
 
 Findest du die Ursache nicht, oder lässt sich der Fehler nicht mit einem Test zeigen, setze `reproduziert` auf false. Beschreibe dann deine Befunde in `ursache` und liste in `fehlende_angaben`, was der Meldung fehlt.
 
