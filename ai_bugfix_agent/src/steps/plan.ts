@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { z } from 'zod'
 import { addWorktree, removeWorktree } from '../git.ts'
 import type { Ticket } from '../ticketfile.ts'
-import { branchName, bulletList, firstSentence, loadPrompt, quoteTicket, worktreePath } from './common.ts'
+import { branchName, bulletList, firstSentence, loadPrompt, outputSchema, quoteTicket, worktreePath } from './common.ts'
 import { isInside } from './policy.ts'
 import type { RunSession } from './session.ts'
 import type { Step, StepResult } from './types.ts'
@@ -19,7 +19,7 @@ export const PlanOutput = z.object({
 })
 export type PlanOutput = z.infer<typeof PlanOutput>
 
-const SCHEMA = z.toJSONSchema(PlanOutput) as Record<string, unknown>
+const SCHEMA = outputSchema(PlanOutput)
 
 export type PlanDeps = { repo: string; worktreeRoot: string; runSession: RunSession }
 

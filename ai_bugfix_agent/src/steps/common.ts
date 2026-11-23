@@ -1,6 +1,16 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { z } from 'zod'
 import { formatTicketFile, type Ticket } from '../ticketfile.ts'
+
+/**
+ * JSON-Schema für `outputFormat`. Ohne `$schema`: zod trägt Draft 2020-12 ein,
+ * und Claude Code lehnt das Schema dann als ungültig ab.
+ */
+export function outputSchema(schema: z.ZodType): Record<string, unknown> {
+  const { $schema: _ignored, ...rest } = z.toJSONSchema(schema) as Record<string, unknown>
+  return rest
+}
 
 export function branchName(id: number): string {
   return `bugfix/bug-${id}`

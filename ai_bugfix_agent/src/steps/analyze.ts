@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { runShell, tailLines } from '../command.ts'
 import { addWorktree, branchExists, changedFiles, commitFile, deleteBranch, removeWorktree } from '../git.ts'
 import type { Ticket } from '../ticketfile.ts'
-import { branchName, bulletList, firstSentence, loadPrompt, quoteTicket, worktreePath } from './common.ts'
+import { branchName, bulletList, firstSentence, loadPrompt, outputSchema, quoteTicket, worktreePath } from './common.ts'
 import type { RunSession } from './session.ts'
 import type { Step, StepResult } from './types.ts'
 
@@ -23,7 +23,7 @@ export const AnalyzeOutput = z.object({
 })
 export type AnalyzeOutput = z.infer<typeof AnalyzeOutput>
 
-const SCHEMA = z.toJSONSchema(AnalyzeOutput) as Record<string, unknown>
+const SCHEMA = outputSchema(AnalyzeOutput)
 
 export type AnalyzeDeps = {
   repo: string

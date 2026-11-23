@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { bulletList, firstSentence, quoteTicket } from '../src/steps/common.ts'
+import { z } from 'zod'
+import { bulletList, firstSentence, outputSchema, quoteTicket } from '../src/steps/common.ts'
 import { parseTicket } from '../src/ticketfile.ts'
 
 test('firstSentence: erster Satz der ersten Zeile', () => {
@@ -15,6 +16,13 @@ test('quoteTicket setzt das Ticket in einen Block, den der Text nicht schließen
   assert.ok(quoted.startsWith('<<<TICKET\nid: 1\n'))
   assert.ok(quoted.endsWith('\nTICKET>>>'))
   assert.equal(quoted.split('TICKET>>>').length, 2)
+})
+
+test('outputSchema: JSON-Schema ohne $schema, das Claude Code nicht prüfen kann', () => {
+  const schema = outputSchema(z.object({ a: z.string() }))
+  assert.equal('$schema' in schema, false)
+  assert.equal(schema.type, 'object')
+  assert.deepEqual(schema.required, ['a'])
 })
 
 test('bulletList', () => {
