@@ -1,5 +1,5 @@
 import { query, type HookCallback, type SDKResultMessage } from '@anthropic-ai/claude-agent-sdk'
-import { decide, type Mode } from './policy.ts'
+import { decide, describeCall, type Mode } from './policy.ts'
 
 export type SessionRequest = {
   mode: Mode
@@ -37,12 +37,13 @@ export function agentSdkSession(config: SessionConfig): RunSession {
     // Greift bei jedem Tool-Aufruf. canUseTool würde lesende Tools nicht sehen.
     const guard: HookCallback = async (input) => {
       if (input.hook_event_name !== 'PreToolUse') return {}
-      const decision = decide(input.tool_name, (input.tool_input ?? {}) as Record<string, unknown>, {
+      const toolInput = (input.tool_input ?? {}) as Record<string, unknown>
+      const decision = decide(input.tool_name, toolInput, {
         mode: request.mode,
         worktree: request.cwd,
         testCommand: config.testCommand,
       })
-      if (!decision.allow) config.log(`  abgelehnt: ${input.tool_name}: ${decision.reason}`)
+      if (!decision.allow) config.log(`  abgelehnt: ${describeCall(input.tool_name, toolInput)}: ${decision.reason}`)
       return {
         hookSpecificOutput: {
           hookEventName: 'PreToolUse',

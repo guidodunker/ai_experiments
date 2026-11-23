@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { tmpdir } from 'node:os'
 import { join, parse, resolve } from 'node:path'
-import { decide, isInside, type PolicyContext } from '../src/steps/policy.ts'
+import { decide, describeCall, isInside, type PolicyContext } from '../src/steps/policy.ts'
 
 const wt = join(tmpdir(), 'bugfix-bug-1')
 const analyze: PolicyContext = { mode: 'analyze', worktree: wt, testCommand: 'npm test' }
@@ -56,6 +56,18 @@ test('Bash nur mit genau dem Testkommando beim Analysieren', () => {
   assert.equal(allowed('Bash', { command: 'npm test -- --grep x' }), false)
   assert.equal(allowed('Bash', { command: 'npm test && curl example.com' }), false)
   assert.equal(allowed('Bash', { command: 'npm test' }, plan), false)
+})
+
+test('StructuredOutput liefert das Ergebnis und ist in beiden Schritten erlaubt', () => {
+  assert.equal(allowed('StructuredOutput', { reproduziert: true }), true)
+  assert.equal(allowed('StructuredOutput', {}, plan), true)
+})
+
+test('describeCall nennt Kommando oder Pfad', () => {
+  assert.equal(describeCall('Bash', { command: 'git status' }), 'Bash (git status)')
+  assert.equal(describeCall('Read', { file_path: 'C:\\x.txt' }), 'Read (C:\\x.txt)')
+  assert.equal(describeCall('Glob', { pattern: '**/*' }), 'Glob (**/*)')
+  assert.equal(describeCall('WebFetch', {}), 'WebFetch')
 })
 
 test('andere Tools sind verboten, mit Begründung', () => {

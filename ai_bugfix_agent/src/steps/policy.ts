@@ -50,7 +50,16 @@ export function decide(tool: string, input: Record<string, unknown>, ctx: Policy
       return typeof input.command === 'string' && input.command.trim() === ctx.testCommand
         ? ALLOW
         : { allow: false, reason: `Erlaubt ist nur das Testkommando, wörtlich: ${ctx.testCommand}` }
+    case 'StructuredOutput':
+      // Über dieses Tool liefert die Sitzung ihr Ergebnis nach `outputFormat`.
+      return ALLOW
     default:
       return forbidden(tool)
   }
+}
+
+/** Tool und Kommando oder Pfad, für die Logzeile einer Ablehnung. */
+export function describeCall(tool: string, input: Record<string, unknown>): string {
+  const detail = [input.command, input.file_path, input.path, input.pattern].find((v) => typeof v === 'string')
+  return detail === undefined ? tool : `${tool} (${String(detail)})`
 }
