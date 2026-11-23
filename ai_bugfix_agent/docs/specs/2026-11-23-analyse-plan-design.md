@@ -182,7 +182,7 @@ kosten_plan: 0.31
    - `TARGET_TEST_CMD` schlägt fehl, und `testname` kommt in der Ausgabe vor.
 7. Sind beide Prüfungen erfüllt:
    - Commit von `testdatei` auf `bugfix/bug-N` mit der Nachricht `bug N: roter Test – <titel>`
-   - Ergebnis: `status: analysiert`, Felder `branch`, `test`, `kosten_analyse`, Abschnitt `## Analyse` mit Ursache, Stellen und den letzten 30 Zeilen der Testausgabe
+   - Ergebnis: `status: analysiert`, Felder `branch`, `test`, `kosten_analyse`, Abschnitt `## Analyse` mit Ursache, Stellen und höchstens 30 Zeilen der Testausgabe ab der ersten Zeile mit dem Testnamen
 8. Bei `reproduziert: false` oder einer gescheiterten Prüfung:
    - Ergebnis: `status: nicht_reproduziert`, Feld `kosten_analyse`, Abschnitt `## Analyse` mit Ursache oder Befund, Stellen, fehlenden Angaben und gegebenenfalls dem Grund, aus dem die Prüfung scheiterte
    - Der Code löscht den Branch.

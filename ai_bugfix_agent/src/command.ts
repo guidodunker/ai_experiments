@@ -34,7 +34,10 @@ function collect(child: ChildProcess): Promise<CommandResult> {
 
 /** Führt eine Kommandozeile über die Shell aus, z. B. das Testkommando des Ziel-Repos. */
 export function runShell(command: string, cwd: string): Promise<CommandResult> {
-  return collect(spawn(command, { cwd, shell: true }))
+  // Läuft dieser Prozess selbst unter `node --test`, hielte sich ein `node --test`
+  // des Ziel-Repos für einen Teilprozess davon und meldete Erfolg trotz roter Tests.
+  const { NODE_TEST_CONTEXT: _ignored, ...env } = process.env
+  return collect(spawn(command, { cwd, shell: true, env }))
 }
 
 /** Führt ein Programm ohne Shell aus; Argumente werden nicht interpretiert. */
