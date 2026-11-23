@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readdir, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { formatPost } from './parser.ts'
 import { isNotFound } from './state.ts'
@@ -29,19 +29,25 @@ export function formatTimestamp(date: Date): string {
   )
 }
 
-export async function nextTicketNumber(dir: string): Promise<number> {
+/** Nummern aller Tickets im Verzeichnis, aufsteigend. Fehlt das Verzeichnis, keine. */
+export async function listTicketIds(dir: string): Promise<number[]> {
   let names: string[]
   try {
     names = await readdir(dir)
   } catch (error) {
-    if (isNotFound(error)) return 1
+    if (isNotFound(error)) return []
     throw error
   }
-  const numbers = names.flatMap((name) => {
-    const match = TICKET_FILE.exec(name)
-    return match === null ? [] : [Number(match[1])]
-  })
-  return Math.max(0, ...numbers) + 1
+  return names
+    .flatMap((name) => {
+      const match = TICKET_FILE.exec(name)
+      return match === null ? [] : [Number(match[1])]
+    })
+    .sort((a, b) => a - b)
+}
+
+export async function nextTicketNumber(dir: string): Promise<number> {
+  return Math.max(0, ...(await listTicketIds(dir))) + 1
 }
 
 /** Kopfwerte müssen einzeilig bleiben, sonst endet der Kopf zu früh. */
@@ -91,14 +97,26 @@ export async function appendToTicket(
   entry: { level: number; text: string },
   now: Date,
 ): Promise<boolean> {
-  const section = `\n### ${formatTimestamp(now)} (Antwort, Ebene ${entry.level})\n${entry.text.trim()}\n`
+  const path = ticketPath(dir, id)
+  let content: string
   try {
-    // 'r+' öffnet nur vorhandene Dateien; appendFile allein würde eine neue anlegen.
-    await writeFile(ticketPath(dir, id), '', { flag: 'r+' })
+    content = await readFile(path, 'utf8')
   } catch (error) {
     if (isNotFound(error)) return false
     throw error
   }
-  await appendFile(ticketPath(dir, id), section)
+  const section = `\n### ${formatTimestamp(now)} (Antwort, Ebene ${entry.level})\n${entry.text.trim()}\n`
+  await writeFile(path, insertIntoAddenda(content, section))
   return true
+}
+
+/** Fügt am Ende von `## Nachträge` ein, vor einem späteren Abschnitt wie `## Analyse`. */
+function insertIntoAddenda(content: string, section: string): string {
+  const heading = /^## Nachträge$/m.exec(content)
+  if (heading === null) return content + section
+  const afterHeading = heading.index + heading[0].length
+  const next = /^## /m.exec(content.slice(afterHeading))
+  if (next === null) return content + section
+  const cut = afterHeading + next.index
+  return `${content.slice(0, cut).replace(/\n+$/, '\n')}${section}\n${content.slice(cut)}`
 }

@@ -7,6 +7,8 @@
   "scripts": {
     "start": "node --experimental-strip-types --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/main.ts",
     "watch": "node --experimental-strip-types --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/main.ts --watch",
+    "steps": "node --experimental-strip-types --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/steps-main.ts",
+    "demo:init": "node --experimental-strip-types --disable-warning=ExperimentalWarning --env-file-if-exists=.env scripts/demo-init.ts",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test \"test/**/*.test.ts\"",
     "typecheck": "tsc"
   },
@@ -15,6 +17,7 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.330",
     "@openrouter/agent": "0.11.0",
     "zod": "4.5.4"
   }

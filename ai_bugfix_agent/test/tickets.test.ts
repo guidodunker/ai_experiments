@@ -1,12 +1,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
+import { appendFile, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   appendToTicket,
   createTicket,
   formatTimestamp,
+  listTicketIds,
   nextTicketNumber,
 } from '../src/tickets.ts'
 import type { Thread } from '../src/types.ts'
@@ -87,4 +88,29 @@ test('appendToTicket hängt einen Nachtrag an', async () => {
 
 test('appendToTicket: unbekanntes Ticket ergibt false', async () => {
   assert.equal(await appendToTicket(await tempDir(), 99, { level: 2, text: 'x' }, NOW), false)
+})
+
+test('listTicketIds: aufsteigend, fremde Dateien egal, fehlendes Verzeichnis leer', async () => {
+  const dir = await tempDir()
+  for (const name of ['bug_10.txt', 'bug_2.txt', 'notiz.txt']) await writeFile(join(dir, name), '')
+  assert.deepEqual(await listTicketIds(dir), [2, 10])
+  assert.deepEqual(await listTicketIds(join(dir, 'fehlt')), [])
+})
+
+test('appendToTicket: Nachtrag landet vor einem späteren Abschnitt', async () => {
+  const dir = await tempDir()
+  await createTicket(dir, thread, fields, NOW)
+  await appendFile(join(dir, 'bug_1.txt'), '\n## Analyse\nUrsache X\n')
+  await appendToTicket(dir, 1, { level: 2, text: 'erster' }, NOW)
+  await appendToTicket(dir, 1, { level: 3, text: 'zweiter' }, NOW)
+  const content = await readFile(join(dir, 'bug_1.txt'), 'utf8')
+  assert.ok(
+    content.endsWith(
+      '## Nachträge\n\n' +
+        '### 2026-11-20T15:42:05 (Antwort, Ebene 2)\nerster\n\n' +
+        '### 2026-11-20T15:42:05 (Antwort, Ebene 3)\nzweiter\n\n' +
+        '## Analyse\nUrsache X\n',
+    ),
+    content,
+  )
 })

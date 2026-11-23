@@ -1,0 +1,6 @@
+> Wenn ich in der Kontaktsuche „müller“ eintippe, finde ich Herrn MÜLLER nicht. Mit „MÜLLER“ klappt es.
+>> bei mir auch, ebenso bei „schäfer“
+> Auf der letzten Seite der Kontaktliste fehlt immer der letzte Kontakt.
+> Kontakte mit Ä wie Ärger stehen in der sortierten Liste ganz am Ende, hinter Zander.
+> Der Export nach Excel stürzt ab, sobald ich auf Speichern klicke.
+> Danke für das neue Design, sieht gut aus!

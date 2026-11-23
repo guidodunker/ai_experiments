@@ -9,5 +9,6 @@ node_modules/
 state.json
 tickets/
 agent.log
+steps.lock
 
 .idea/
