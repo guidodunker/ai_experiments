@@ -1,6 +1,7 @@
 import { rm, writeFile } from 'node:fs/promises'
 import { readTicket, setSection, writeTicket, type Ticket } from '../ticketfile.ts'
 import { listTicketIds } from '../tickets.ts'
+import type { ChatReply } from '../types.ts'
 import type { Step, StepResult } from './types.ts'
 
 export type RunnerDeps = {
@@ -10,6 +11,8 @@ export type RunnerDeps = {
   log: (message: string) => void
   /** Nur dieses Ticket bearbeiten */
   only?: number
+  /** Antwortet in Slack-Threads. Fehlt, wenn SLACK_BOT_TOKEN oder SLACK_CHANNEL_ID nicht gesetzt ist. */
+  reply?: ChatReply
 }
 
 export function applyResult(ticket: Ticket, result: StepResult): Ticket {
@@ -51,6 +54,23 @@ export async function runSteps(deps: RunnerDeps): Promise<number> {
   }
 }
 
+/** Meldet einen Statuswechsel im Slack-Thread des Tickets. Wirft nie. */
+async function announce(ticket: Ticket, text: string, deps: RunnerDeps): Promise<void> {
+  if (ticket.header.get('quelle') !== 'slack') return
+  const thread = ticket.header.get('thread')
+  if (deps.reply === undefined || thread === undefined) {
+    deps.log(
+      `Warnung: Ticket ${ticket.id} stammt aus Slack, aber SLACK_BOT_TOKEN oder SLACK_CHANNEL_ID fehlt. Keine Antwort im Thread.`,
+    )
+    return
+  }
+  try {
+    await deps.reply(thread, text)
+  } catch (error) {
+    deps.log(`Warnung: Antwort an Thread ${thread} gescheitert: ${message(error)}`)
+  }
+}
+
 /** Bringt ein Ticket so weit wie möglich voran. false, wenn etwas gescheitert ist. */
 async function advance(id: number, deps: RunnerDeps): Promise<boolean> {
   // Ein Schritt, der den Status nicht ändert, würde sonst endlos wiederholt.
@@ -71,8 +91,11 @@ async function advance(id: number, deps: RunnerDeps): Promise<boolean> {
     try {
       const result = await step.run(ticket)
       // Neu lesen: Der Chat-Agent kann während des Schritts einen Nachtrag angehängt haben.
-      await writeTicket(deps.ticketDir, applyResult(await readTicket(deps.ticketDir, id), result))
-      deps.log(`Ticket ${id} ${step.name} → ${result.status} ${result.summary}`.trimEnd())
+      const updated = applyResult(await readTicket(deps.ticketDir, id), result)
+      await writeTicket(deps.ticketDir, updated)
+      const change = `${result.status} ${result.summary}`.trimEnd()
+      deps.log(`Ticket ${id} ${step.name} → ${change}`)
+      await announce(updated, `bug-${id}: ${change}`, deps)
     } catch (error) {
       deps.log(`Ticket ${id} ${step.name} gescheitert: ${message(error)}`)
       return false

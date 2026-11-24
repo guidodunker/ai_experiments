@@ -101,6 +101,58 @@ test('Schritt ohne Statuswechsel läuft nicht endlos', async () => {
   assert.equal(calls, 1)
 })
 
+async function slackSetup(reply: RunnerDeps['reply']) {
+  const env = await setup({}, [analyze, plan])
+  await writeFile(
+    join(env.dir, 'bug_1.txt'),
+    'id: 1\nstatus: neu\nthread: 1764000000.000100\nquelle: slack\ntitel: T1\n\n## Nachträge\n',
+  )
+  return { ...env, deps: { ...env.deps, reply } }
+}
+
+test('Slack-Ticket: jeder Statuswechsel erscheint im Thread', async () => {
+  const sent: [string, string][] = []
+  const env = await slackSetup(async (threadId, text) => {
+    sent.push([threadId, text])
+  })
+  assert.equal(await runSteps(env.deps), 0)
+  assert.deepEqual(sent, [
+    ['1764000000.000100', 'bug-1: analysiert (0.10 $): A'],
+    ['1764000000.000100', 'bug-1: geplant (0.10 $): P'],
+  ])
+})
+
+test('Datei-Ticket und Ticket ohne quelle: keine Antwort', async () => {
+  const sent: string[] = []
+  const env = await setup({ 1: 'neu' }, [analyze])
+  await writeFile(join(env.dir, 'bug_2.txt'), 'id: 2\nstatus: neu\nthread: 0\nquelle: datei\ntitel: T2\n\n## Nachträge\n')
+  assert.equal(await runSteps({ ...env.deps, reply: async (_id, text) => void sent.push(text) }), 0)
+  assert.deepEqual(sent, [])
+})
+
+test('scheiternde Antwort: Statuswechsel gilt, Warnung im Log', async () => {
+  const env = await slackSetup(async () => {
+    throw new Error('not_in_channel')
+  })
+  assert.equal(await runSteps(env.deps), 0)
+  assert.match(await env.read(1), /^status: geplant$/m)
+  assert.ok(
+    env.logs.includes('Warnung: Antwort an Thread 1764000000.000100 gescheitert: not_in_channel'),
+    env.logs.join('\n'),
+  )
+})
+
+test('Slack-Ticket ohne Slack-Konfiguration: Warnung statt Antwort', async () => {
+  const env = await slackSetup(undefined)
+  assert.equal(await runSteps(env.deps), 0)
+  assert.ok(
+    env.logs.includes(
+      'Warnung: Ticket 1 stammt aus Slack, aber SLACK_BOT_TOKEN oder SLACK_CHANNEL_ID fehlt. Keine Antwort im Thread.',
+    ),
+    env.logs.join('\n'),
+  )
+})
+
 test('Nachtrag während des Schritts geht nicht verloren', async () => {
   const env = await setup({ 1: 'neu' }, [])
   const withReply: Step = {

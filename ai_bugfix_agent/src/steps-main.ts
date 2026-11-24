@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { isGitRepo } from './git.ts'
 import { createLog } from './log.ts'
+import { slackReplyFromEnv } from './sources/config.ts'
 import { createAnalyzeStep } from './steps/analyze.ts'
 import { createPlanStep } from './steps/plan.ts'
 import { runSteps } from './steps/runner.ts'
@@ -54,6 +55,7 @@ async function main(): Promise<number> {
       lockPath: join(ROOT, 'steps.lock'),
       log,
       only,
+      reply: slackReplyFromEnv(process.env),
       steps: [
         createAnalyzeStep({ ...common, base: setting('TARGET_BASE') ?? 'main', testCommand }),
         createPlanStep(common),
