@@ -25,6 +25,8 @@ async function deps(runModel: RunModel, state: State = { threads: {} }) {
       runModel,
       log: (message: string) => logs.push(message),
       now: () => new Date(2026, 10, 20, 9, 0, 0),
+      source: 'datei' as const,
+      reply: async (_threadId: string, _text: string) => {},
     },
   }
 }
@@ -73,6 +75,40 @@ test('Begründung des Modells wird mit Thread-Index geloggt', async () => {
   const { deps: d, logs } = await deps(async () => 'Kein Ticket: Smalltalk, keine Fehlermeldung.')
   await handleEvent(newThread, d)
   assert.deepEqual(logs, ['Thread 2 → Kein Ticket: Smalltalk, keine Fehlermeldung.'])
+})
+
+test('reply geht an die ID des Threads', async () => {
+  const sent: [string, string][] = []
+  const { deps: d } = await deps(async ({ tools }) => {
+    await tools.find((t) => t.name === 'create_ticket')!.execute({
+      title: 'Export stürzt ab',
+      description: 'Absturz.',
+      component: 'Export',
+      severity: 'hoch',
+    })
+  })
+  d.reply = async (threadId, text) => {
+    sent.push([threadId, text])
+  }
+  await handleEvent(newThread, d)
+  assert.deepEqual(sent, [['2', 'Ticket bug-1 angelegt: Export stürzt ab (Export, hoch)']])
+})
+
+test('scheiternde Antwort ist nur eine Warnung, das Ticket bleibt', async () => {
+  const { deps: d, logs } = await deps(async ({ tools }) => {
+    await tools.find((t) => t.name === 'create_ticket')!.execute({
+      title: 'Export stürzt ab',
+      description: 'Absturz.',
+      component: 'Export',
+      severity: 'hoch',
+    })
+  })
+  d.reply = async () => {
+    throw new Error('not_in_channel')
+  }
+  await handleEvent(newThread, d)
+  assert.equal(d.state.threads['2']?.ticket, 1)
+  assert.deepEqual(logs, ['Warnung: Antwort an Thread 2 gescheitert: not_in_channel'])
 })
 
 test('Warnung, wenn das Schrittlimit ausgeschöpft wird', async () => {

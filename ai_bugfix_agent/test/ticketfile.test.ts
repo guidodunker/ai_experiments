@@ -27,7 +27,7 @@ test('formatTicketFile ergibt den Text eines neuen Tickets unverändert', async 
   const dir = await mkdtemp(join(tmpdir(), 'bugagent-'))
   const thread = { id: '0', index: 0, top: { level: 1, text: 'Bug' }, replies: [] }
   const fields = { title: 'T', description: 'D', component: 'K', severity: 'hoch' as const }
-  await createTicket(dir, thread, fields, new Date(2026, 10, 23, 9, 0, 0))
+  await createTicket(dir, thread, fields, new Date(2026, 10, 23, 9, 0, 0), 'datei')
   const text = await readFile(join(dir, 'bug_1.txt'), 'utf8')
   assert.equal(formatTicketFile(parseTicket(text)), text)
 })

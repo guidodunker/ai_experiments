@@ -14,5 +14,10 @@ export type ChatEvent =
 
 export type ThreadState = { topHash: string; replyCount: number; ticket: number | null }
 
+export type SourceName = 'datei' | 'slack'
+
+/** Antwortet im Thread mit dieser ID. Wirft bei einem Fehler. */
+export type ChatReply = (threadId: string, text: string) => Promise<void>
+
 /** Schlüssel ist die Thread-ID. */
 export type State = { threads: Record<string, ThreadState> }

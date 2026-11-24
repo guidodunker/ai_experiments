@@ -3,10 +3,11 @@ import { handleEvent, type RunModel } from './agent.ts'
 import { diff } from './diff.ts'
 import { parseChat } from './parser.ts'
 import { applyEvent, isNotFound, loadState, saveState } from './state.ts'
-import type { ChatEvent } from './types.ts'
+import type { ChatEvent, ChatReply } from './types.ts'
 
 export type RunDeps = {
   chatPath: string
+  reply: ChatReply
   statePath: string
   ticketDir: string
   runModel: RunModel
@@ -48,6 +49,8 @@ export async function runOnce(deps: RunDeps): Promise<'ok' | 'missing'> {
       runModel: deps.runModel,
       log: deps.log,
       now: deps.now ?? (() => new Date()),
+      source: 'datei',
+      reply: deps.reply,
     })
     applyEvent(state, event)
     await persist()

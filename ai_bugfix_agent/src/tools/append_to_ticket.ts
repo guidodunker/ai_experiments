@@ -14,6 +14,8 @@ export const appendToTicketTool = defineTool({
   execute: async (input, ctx) => {
     const level = ctx.event.kind === 'NewReply' ? ctx.event.reply.level : 1
     const ok = await appendToTicket(ctx.ticketDir, input.ticket, { level, text: input.text }, ctx.now())
-    return ok ? { ok: true } : { error: `Ticket ${input.ticket} existiert nicht.` }
+    if (!ok) return { error: `Ticket ${input.ticket} existiert nicht.` }
+    await ctx.reply(`Nachtrag an bug-${input.ticket} angehängt.`)
+    return { ok: true }
   },
 })

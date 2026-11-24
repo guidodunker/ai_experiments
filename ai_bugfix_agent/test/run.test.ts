@@ -33,6 +33,7 @@ async function setup(chat: string | null): Promise<{ deps: RunDeps; logs: string
       runModel: fakeModel,
       log: (m) => logs.push(m),
       now: () => new Date(2026, 10, 20, 12, 0, 0),
+      reply: async () => {},
     },
   }
 }

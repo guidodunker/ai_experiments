@@ -17,8 +17,9 @@ const thread: Thread = {
 }
 const input = { title: 'Login schlägt fehl', description: 'Login geht nicht.', component: 'Login', severity: 'hoch' as const }
 
-async function context(event: ChatEvent): Promise<{ ctx: ToolContext; persisted: () => number }> {
+async function context(event: ChatEvent): Promise<{ ctx: ToolContext; persisted: () => number; replies: string[] }> {
   let saves = 0
+  const replies: string[] = []
   const state: State = { threads: {} }
   const ctx: ToolContext = {
     event,
@@ -28,8 +29,12 @@ async function context(event: ChatEvent): Promise<{ ctx: ToolContext; persisted:
       saves++
     },
     now: () => new Date(2026, 10, 20, 10, 0, 0),
+    source: 'datei',
+    reply: async (text) => {
+      replies.push(text)
+    },
   }
-  return { ctx, persisted: () => saves }
+  return { ctx, persisted: () => saves, replies }
 }
 
 test('create_ticket legt Ticket an und speichert die Nummer sofort', async () => {
@@ -70,4 +75,31 @@ test('append_to_ticket meldet unbekannte Nummer als Fehlertext', async () => {
   assert.deepEqual(await appendToTicketTool.execute({ ticket: 42, text: 'x' }, ctx), {
     error: 'Ticket 42 existiert nicht.',
   })
+})
+
+test('create_ticket antwortet im Thread mit Nummer, Titel, Komponente und Schweregrad', async () => {
+  const { ctx, replies } = await context({ kind: 'NewThread', thread })
+  await createTicketTool.execute(input, ctx)
+  assert.deepEqual(replies, ['Ticket bug-1 angelegt: Login schlägt fehl (Login, hoch)'])
+  assert.match(await readFile(join(ctx.ticketDir, 'bug_1.txt'), 'utf8'), /^quelle: datei$/m)
+})
+
+test('create_ticket antwortet nicht, wenn es ablehnt', async () => {
+  const { ctx, replies } = await context({ kind: 'NewThread', thread })
+  await createTicketTool.execute(input, ctx)
+  await createTicketTool.execute(input, ctx)
+  assert.equal(replies.length, 1)
+})
+
+test('append_to_ticket antwortet im Thread', async () => {
+  const { ctx, replies } = await context({ kind: 'NewReply', thread, reply: thread.replies[0]!, replyIndex: 0 })
+  await createTicketTool.execute(input, ctx)
+  await appendToTicketTool.execute({ ticket: 1, text: 'Nur in Firefox' }, ctx)
+  assert.equal(replies.at(-1), 'Nachtrag an bug-1 angehängt.')
+})
+
+test('append_to_ticket antwortet nicht bei unbekannter Nummer', async () => {
+  const { ctx, replies } = await context({ kind: 'NewThread', thread })
+  await appendToTicketTool.execute({ ticket: 42, text: 'x' }, ctx)
+  assert.deepEqual(replies, [])
 })

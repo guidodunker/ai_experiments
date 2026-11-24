@@ -34,6 +34,7 @@ async function main(): Promise<number | undefined> {
     ticketDir: join(ROOT, 'tickets'),
     runModel: openRouterModel(apiKey, MODEL),
     log,
+    reply: async (threadId, text) => log(`Antwort an Thread ${threadId}: ${text}`),
   }
 
   if (!process.argv.includes('--watch')) {

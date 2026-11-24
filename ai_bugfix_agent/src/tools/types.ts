@@ -1,5 +1,5 @@
 import type { z } from 'zod'
-import type { ChatEvent, State } from '../types.ts'
+import type { ChatEvent, SourceName, State } from '../types.ts'
 
 /** Was ein Tool vom Agenten bekommt. Das LLM sieht davon nichts. */
 export type ToolContext = {
@@ -9,6 +9,9 @@ export type ToolContext = {
   /** Schreibt den Zustand sofort auf die Platte. */
   persist: () => Promise<void>
   now: () => Date
+  source: SourceName
+  /** Antwortet im Thread des Ereignisses. Wirft nie, Fehler stehen als Warnung im Log. */
+  reply: (text: string) => Promise<void>
 }
 
 /**

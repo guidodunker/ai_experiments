@@ -43,7 +43,7 @@ test('nextTicketNumber: höchste Nummer + 1, Lücken und fremde Dateien egal', a
 
 test('createTicket schreibt das Ticketformat', async () => {
   const dir = join(await tempDir(), 'tickets')
-  const id = await createTicket(dir, thread, fields, NOW)
+  const id = await createTicket(dir, thread, fields, NOW, 'datei')
   assert.equal(id, 1)
   assert.equal(
     await readFile(join(dir, 'bug_1.txt'), 'utf8'),
@@ -52,6 +52,7 @@ test('createTicket schreibt das Ticketformat', async () => {
       'status: neu',
       'erstellt: 2026-11-20T15:42:05',
       'thread: 4',
+      'quelle: datei',
       'titel: Suche reagiert sehr langsam',
       'komponente: Suche',
       'schweregrad: mittel',
@@ -70,13 +71,20 @@ test('createTicket schreibt das Ticketformat', async () => {
 
 test('createTicket: Zeilenumbrüche im Titel werden zu Leerzeichen', async () => {
   const dir = await tempDir()
-  await createTicket(dir, thread, { ...fields, title: 'Zeile\neins' }, NOW)
+  await createTicket(dir, thread, { ...fields, title: 'Zeile\neins' }, NOW, 'datei')
   assert.match(await readFile(join(dir, 'bug_1.txt'), 'utf8'), /^titel: Zeile eins$/m)
+})
+
+test('createTicket schreibt Slack-Thread-ID und Quelle', async () => {
+  const dir = await tempDir()
+  await createTicket(dir, { ...thread, id: '1764000000.123456' }, fields, NOW, 'slack')
+  const content = await readFile(join(dir, 'bug_1.txt'), 'utf8')
+  assert.match(content, /^thread: 1764000000\.123456\nquelle: slack$/m)
 })
 
 test('appendToTicket hängt einen Nachtrag an', async () => {
   const dir = await tempDir()
-  await createTicket(dir, thread, fields, NOW)
+  await createTicket(dir, thread, fields, NOW, 'datei')
   const ok = await appendToTicket(dir, 1, { level: 2, text: 'Tritt ab 1000 Treffern auf.' }, NOW)
   assert.equal(ok, true)
   const content = await readFile(join(dir, 'bug_1.txt'), 'utf8')
@@ -99,7 +107,7 @@ test('listTicketIds: aufsteigend, fremde Dateien egal, fehlendes Verzeichnis lee
 
 test('appendToTicket: Nachtrag landet vor einem späteren Abschnitt', async () => {
   const dir = await tempDir()
-  await createTicket(dir, thread, fields, NOW)
+  await createTicket(dir, thread, fields, NOW, 'datei')
   await appendFile(join(dir, 'bug_1.txt'), '\n## Analyse\nUrsache X\n')
   await appendToTicket(dir, 1, { level: 2, text: 'erster' }, NOW)
   await appendToTicket(dir, 1, { level: 3, text: 'zweiter' }, NOW)

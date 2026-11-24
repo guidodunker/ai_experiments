@@ -2,7 +2,7 @@ import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { formatPost } from './parser.ts'
 import { isNotFound } from './state.ts'
-import type { Thread } from './types.ts'
+import type { SourceName, Thread } from './types.ts'
 
 export type Severity = 'niedrig' | 'mittel' | 'hoch'
 
@@ -51,16 +51,23 @@ export async function nextTicketNumber(dir: string): Promise<number> {
 }
 
 /** Kopfwerte müssen einzeilig bleiben, sonst endet der Kopf zu früh. */
-function oneLine(value: string): string {
+export function oneLine(value: string): string {
   return value.replace(/\s*\r?\n\s*/g, ' ').trim()
 }
 
-export function formatTicket(id: number, thread: Thread, fields: TicketFields, created: Date): string {
+export function formatTicket(
+  id: number,
+  thread: Thread,
+  fields: TicketFields,
+  created: Date,
+  source: SourceName,
+): string {
   return [
     `id: ${id}`,
     'status: neu',
     `erstellt: ${formatTimestamp(created)}`,
     `thread: ${thread.id}`,
+    `quelle: ${source}`,
     `titel: ${oneLine(fields.title)}`,
     `komponente: ${oneLine(fields.component)}`,
     `schweregrad: ${fields.severity}`,
@@ -82,11 +89,12 @@ export async function createTicket(
   thread: Thread,
   fields: TicketFields,
   now: Date,
+  source: SourceName,
 ): Promise<number> {
   await mkdir(dir, { recursive: true })
   const id = await nextTicketNumber(dir)
   // 'wx' schlägt fehl, falls die Datei inzwischen existiert, statt sie zu überschreiben.
-  await writeFile(ticketPath(dir, id), formatTicket(id, thread, fields, now), { flag: 'wx' })
+  await writeFile(ticketPath(dir, id), formatTicket(id, thread, fields, now, source), { flag: 'wx' })
   return id
 }
 

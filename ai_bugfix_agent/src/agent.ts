@@ -3,7 +3,7 @@ import type { z } from 'zod'
 import { formatPost } from './parser.ts'
 import { TOOLS } from './tools/index.ts'
 import type { AgentTool, ToolContext } from './tools/types.ts'
-import type { ChatEvent, State } from './types.ts'
+import type { ChatEvent, ChatReply, SourceName, State } from './types.ts'
 
 /** Begrenzt den Tool-Loop, damit ein verwirrtes Modell keinen endlosen Lauf abrechnet. */
 export const MAX_STEPS = 4
@@ -35,6 +35,9 @@ export type AgentDeps = {
   runModel: RunModel
   log: (message: string) => void
   now: () => Date
+  source: SourceName
+  /** Antwortweg der Quelle. Fehler fängt `handleEvent` ab. */
+  reply: ChatReply
   tools?: AgentTool[]
 }
 
@@ -61,6 +64,17 @@ export async function handleEvent(event: ChatEvent, deps: AgentDeps): Promise<vo
     ticketDir: deps.ticketDir,
     persist: deps.persist,
     now: deps.now,
+    source: deps.source,
+    // Nicht wiederholen: Das Ticket ist schon geschrieben, ein zweiter Versuch im nächsten Lauf gäbe ein Duplikat.
+    reply: async (text) => {
+      try {
+        await deps.reply(event.thread.id, text)
+      } catch (error) {
+        deps.log(
+          `Warnung: Antwort an Thread ${event.thread.index} gescheitert: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
+    },
   }
 
   let calls = 0
