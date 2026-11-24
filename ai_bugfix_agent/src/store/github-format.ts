@@ -5,7 +5,14 @@ import { formatTimestamp } from '../tickets.ts'
 export const AGENT_LABEL = 'bugfix-agent'
 
 export type IssueData = { number: number; title: string; body: string; labels: string[]; url: string; open: boolean }
-export type CommentData = { body: string; createdAt: string; login: string }
+/** `association` ist GitHubs `author_association`, z. B. OWNER, MEMBER, NONE. */
+export type CommentData = { body: string; createdAt: string; login: string; association: string }
+
+/**
+ * Nur Kommentare dieser Autoren fließen ins Ticket, auch solche mit Markierung:
+ * Die Markierungen kann jeder schreiben, und in einem öffentlichen Repo kann jeder kommentieren.
+ */
+const TRUSTED = new Set(['OWNER', 'MEMBER', 'COLLABORATOR'])
 /** Kopffelder außer id, status und titel */
 export type Meta = Record<string, string>
 
@@ -124,7 +131,9 @@ export function toTicket(issue: IssueData, comments: CommentData[]): Ticket {
 
   const replies: string[] = []
   const sections = new Map<string, string>()
-  const sorted = [...comments].sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0))
+  const sorted = comments
+    .filter((comment) => TRUSTED.has(comment.association))
+    .sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0))
   for (const comment of sorted) {
     const body = normalize(comment.body)
     const when = formatTimestamp(new Date(comment.createdAt))

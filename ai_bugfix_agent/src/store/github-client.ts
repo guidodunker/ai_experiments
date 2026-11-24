@@ -20,7 +20,12 @@ type RawIssue = {
   state: string
   pull_request?: unknown
 }
-type RawComment = { body?: string | null; created_at: string; user: { login: string } | null }
+type RawComment = {
+  body?: string | null
+  created_at: string
+  user: { login: string } | null
+  author_association?: string
+}
 
 function toIssue(raw: RawIssue): IssueData {
   return {
@@ -132,7 +137,13 @@ export function githubClient(token: string, repo: string, options: ClientOptions
     async listComments(number) {
       const raw = await all<RawComment>(`${issuePath(number)}/comments?per_page=100`)
       return raw.map(
-        (c): CommentData => ({ body: c.body ?? '', createdAt: c.created_at, login: c.user?.login ?? 'unbekannt' }),
+        (c): CommentData => ({
+          body: c.body ?? '',
+          createdAt: c.created_at,
+          login: c.user?.login ?? 'unbekannt',
+          // Fehlt die Angabe, gilt der Autor als fremd.
+          association: c.author_association ?? 'NONE',
+        }),
       )
     },
     async addComment(number, body) {

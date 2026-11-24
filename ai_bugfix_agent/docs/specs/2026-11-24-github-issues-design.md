@@ -20,7 +20,6 @@ Nicht enthalten:
 
 - Migration der vorhandenen Datei-Tickets 1 bis 5
 - Schließen von Issues durch den Agenten (folgt mit Stufe 3)
-- Filter für Kommentare von Nicht-Mitgliedern (siehe Sicherheit)
 - Webhooks: Der Runner liest Issues bei jedem Lauf
 
 ## Stack
@@ -181,7 +180,7 @@ Die Texte nutzen `store.label(id)` und bei der Anlage die URL:
 ## Sicherheit
 
 - Das Repo `guidodunker/ai_experiments` ist öffentlich. Meldungen, Nachträge, Analyse und Plan sind für alle sichtbar. Freigabe nur für den Demo-Workspace und Testdaten.
-- Kommentare ohne Markierung zählen als Nachtrag und erreichen Analyse und Plan. In einem öffentlichen Repo kann jeder mit GitHub-Konto kommentieren. Sie stehen im Ticket-Block, den die Prompts als Text von Dritten kennzeichnen. Vor einem echten Einsatz müssen sie auf Repo-Mitglieder gefiltert werden (`author_association`).
+- Kommentare ohne Markierung zählen als Nachtrag und erreichen Analyse und Plan. In einem öffentlichen Repo kann jeder mit GitHub-Konto kommentieren, und die Markierungen kann jeder selbst schreiben. Deshalb liest `read` nur Kommentare mit `author_association` `OWNER`, `MEMBER` oder `COLLABORATOR`, mit und ohne Markierung; alle anderen fallen weg. Nachgetragen am 2026-11-24.
 - Der Token steht nur in `.env` und erscheint nicht im Log. Fehlermeldungen enthalten nur Status und `message` von GitHub.
 - Es gelten weiter die Einschränkungen aus Stufe 2: Sitzungen ohne Sandbox, nur Demo-Repo.
 

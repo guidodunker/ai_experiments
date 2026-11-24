@@ -110,8 +110,16 @@ test('listOpenIssues folgt dem Link-Header und lässt Pull Requests weg', async 
 })
 
 test('listComments: Text, Zeit, Login', async () => {
-  const { api } = client([json(200, [{ body: 'x', created_at: '2026-11-24T09:00:00Z', user: { login: 'g' } }])])
-  assert.deepEqual(await api.listComments(7), [{ body: 'x', createdAt: '2026-11-24T09:00:00Z', login: 'g' }])
+  const { api } = client([
+    json(200, [
+      { body: 'x', created_at: '2026-11-24T09:00:00Z', user: { login: 'g' }, author_association: 'OWNER' },
+      { body: 'y', created_at: '2026-11-24T09:01:00Z', user: null },
+    ]),
+  ])
+  assert.deepEqual(await api.listComments(7), [
+    { body: 'x', createdAt: '2026-11-24T09:00:00Z', login: 'g', association: 'OWNER' },
+    { body: 'y', createdAt: '2026-11-24T09:01:00Z', login: 'unbekannt', association: 'NONE' },
+  ])
 })
 
 test('ensureLabels legt nur fehlende an und merkt sich vorhandene', async () => {

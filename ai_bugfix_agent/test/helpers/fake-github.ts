@@ -34,7 +34,12 @@ export function fakeGitHub() {
     listComments: async (number) => [...(comments.get(number) ?? [])],
     addComment: async (number, body) => {
       const list = comments.get(number) ?? []
-      list.push({ body, login: 'bugfix-bot', createdAt: new Date(Date.UTC(2026, 10, 24, 9, 0, clock++)).toISOString() })
+      list.push({
+        body,
+        login: 'bugfix-bot',
+        association: 'OWNER',
+        createdAt: new Date(Date.UTC(2026, 10, 24, 9, 0, clock++)).toISOString(),
+      })
       comments.set(number, list)
     },
     listOpenIssues: async (label) => [...issues.values()].filter((i) => i.open && i.labels.includes(label)).map(copy),

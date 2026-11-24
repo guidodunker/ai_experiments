@@ -54,13 +54,14 @@ Mit `TICKET_STORE=github` legt der Agent Tickets als Issues in `GITHUB_REPO` an 
 - Status als Label `status:<wert>`, dazu `bugfix-agent`, `komponente:<…>`, `schweregrad:<…>`
 - Kopffelder als Tabelle im Body; der Agent pflegt nur den Bereich zwischen `<!-- bugfix-agent:kopf -->` und `<!-- /bugfix-agent:kopf -->`
 - Nachträge, Analyse und Plan als Kommentare. Kommentare von Menschen im Issue zählen ebenfalls als Nachtrag.
+- Es zählen nur Kommentare von Owner, Mitgliedern und Collaborators des Repos (`author_association`), auch solche mit Markierung. Kommentare anderer GitHub-Nutzer ignoriert der Agent.
 - Branch im Ziel-Repo: `bugfix/issue-N`
 
 Den Status setzt ein Mensch zurück, indem er das Label wechselt, z. B. `status:nicht_reproduziert` → `status:neu`. Geschlossene Issues bearbeitet der Runner nicht.
 
 Token: auf GitHub unter Settings → Developer settings → Fine-grained tokens, „Only select repositories“ mit nur diesem Repo, Berechtigung „Issues: Read and write“.
 
-**Achtung:** In einem öffentlichen Repo sind alle Meldungen, Nachträge, Analysen und Pläne öffentlich, und jeder kann Kommentare schreiben, die in die Analyse einfließen. Nur mit Testdaten verwenden.
+**Achtung:** In einem öffentlichen Repo sind alle Meldungen, Nachträge, Analysen und Pläne öffentlich. Nur mit Testdaten verwenden.
 
 ## Erweitern
 
