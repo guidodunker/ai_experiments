@@ -57,7 +57,7 @@ export function quoteTicket(ticket: Ticket): string {
   return `<<<TICKET\n${text}\nTICKET>>>`
 }
 
-export function loadPrompt(name: 'analyze' | 'plan'): string {
+export function loadPrompt(name: 'analyze' | 'plan' | 'fix'): string {
   return readFileSync(new URL(`./prompts/${name}.md`, import.meta.url), 'utf8')
 }
 

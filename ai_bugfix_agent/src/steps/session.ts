@@ -31,6 +31,7 @@ export type SessionConfig = {
 const TOOLS: Record<Mode, string[]> = {
   analyze: ['Read', 'Grep', 'Glob', 'Write', 'Edit', 'Bash'],
   plan: ['Read', 'Grep', 'Glob'],
+  fix: ['Read', 'Grep', 'Glob', 'Write', 'Edit', 'Bash'],
 }
 
 /** Der einzige Ort, der das Agent SDK anfasst. */

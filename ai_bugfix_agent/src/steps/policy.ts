@@ -1,6 +1,6 @@
 import { isAbsolute, relative, resolve, sep } from 'node:path'
 
-export type Mode = 'analyze' | 'plan'
+export type Mode = 'analyze' | 'plan' | 'fix'
 export type PolicyContext = { mode: Mode; worktree: string; testCommand: string }
 export type Decision = { allow: true } | { allow: false; reason: string }
 
@@ -44,9 +44,9 @@ export function decide(tool: string, input: Record<string, unknown>, ctx: Policy
     }
     case 'Write':
     case 'Edit':
-      return ctx.mode === 'analyze' ? checkPath(ctx.worktree, input.file_path, false) : forbidden(tool)
+      return ctx.mode !== 'plan' ? checkPath(ctx.worktree, input.file_path, false) : forbidden(tool)
     case 'Bash':
-      if (ctx.mode !== 'analyze') return forbidden(tool)
+      if (ctx.mode === 'plan') return forbidden(tool)
       return typeof input.command === 'string' && input.command.trim() === ctx.testCommand
         ? ALLOW
         : { allow: false, reason: `Erlaubt ist nur das Testkommando, wörtlich: ${ctx.testCommand}` }
