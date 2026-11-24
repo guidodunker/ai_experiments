@@ -84,7 +84,12 @@ $env:TICKET=3; npm run steps        # nur Ticket 3
 Remove-Item Env:TICKET
 ```
 
-Konfiguration in `.env`, siehe `.env.example`. Ohne `ANTHROPIC_API_KEY` nutzt das SDK einen vorhandenen Claude-Code-Login; die Sitzungen zählen dann gegen dessen Nutzungskontingent. Jede Sitzung ist auf `STEPS_MAX_BUDGET_USD` begrenzt. Die Kosten stehen im Ticket unter `kosten_analyse` und `kosten_plan`, bei einem Login als rechnerischer API-Preis.
+Konfiguration in `.env`, siehe `.env.example`. Wer die Sitzungen bezahlt, legt `STEPS_BACKEND` fest:
+
+- `openrouter` (Default): Die Sitzungen laufen über OpenRouter mit `OPENROUTER_API_KEY`, Modell `anthropic/claude-opus-5`. Sie bekommen ein eigenes Claude-Code-Verzeichnis `.claude-steps/` und einen leeren `ANTHROPIC_API_KEY`, sehen also den Claude-Code-Login dieses Rechners nicht. Stimmt der Key nicht, scheitern sie, statt auf den Login auszuweichen. Fehlt der Key, bricht `npm run steps` beim Start ab. In den OpenRouter-Einstellungen Anthropic als bevorzugten Anbieter setzen; nur damit garantiert OpenRouter den Betrieb mit Claude Code.
+- `claude-login`: über `ANTHROPIC_API_KEY` oder, ohne Key, den Claude-Code-Login dieses Rechners. Die Sitzungen zählen dann gegen dessen Konto.
+
+Jede Sitzung ist auf `STEPS_MAX_BUDGET_USD` begrenzt. Die Kosten stehen im Ticket unter `kosten_analyse` und `kosten_plan`. Das ist der Preis, den das Agent SDK selbst berechnet; über OpenRouter weicht er vom tatsächlich abgerechneten Betrag ab. Maßgeblich ist dann die Activity-Seite von OpenRouter.
 
 Das Ziel-Repo muss ohne Installationsschritt testbar sein: Der Worktree enthält kein `node_modules`.
 
