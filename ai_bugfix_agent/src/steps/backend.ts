@@ -1,4 +1,5 @@
 import { join } from 'node:path'
+import { withoutSecrets } from '../command.ts'
 
 type Env = Record<string, string | undefined>
 
@@ -13,8 +14,8 @@ const DEFAULT_MODEL: Record<Backend, string> = {
 export type BackendChoice = {
   backend: Backend
   model: string
-  /** Umgebung der Sitzung; undefined: die des Prozesses */
-  sessionEnv?: Env
+  /** Umgebung der Sitzung, immer ohne Geheimnisse */
+  sessionEnv: Env
   /** Eigenes Claude-Code-Verzeichnis, muss vor der Sitzung existieren */
   configDir?: string
 }
@@ -28,6 +29,7 @@ function setting(env: Env, name: string): string | undefined {
  * Wer die Sitzungen bezahlt. Bei `openrouter` sieht die Sitzung den
  * Claude-Code-Login nicht: eigenes, leeres Konfigurationsverzeichnis und leerer
  * ANTHROPIC_API_KEY. Stimmt der Token nicht, scheitert sie, statt auszuweichen.
+ * Tokens für GitHub und Slack bekommt die Sitzung in keinem Fall.
  */
 export function chooseBackend(env: Env, root: string): BackendChoice | { error: string } {
   const name = setting(env, 'STEPS_BACKEND') ?? 'openrouter'
@@ -36,7 +38,14 @@ export function chooseBackend(env: Env, root: string): BackendChoice | { error: 
   }
   const backend = name as Backend
   const model = setting(env, 'STEPS_MODEL') ?? DEFAULT_MODEL[backend]
-  if (backend === 'claude-login') return { backend, model }
+  if (backend === 'claude-login') {
+    const apiKey = setting(env, 'ANTHROPIC_API_KEY')
+    return {
+      backend,
+      model,
+      sessionEnv: { ...withoutSecrets(env), ...(apiKey === undefined ? {} : { ANTHROPIC_API_KEY: apiKey }) },
+    }
+  }
 
   const key = setting(env, 'OPENROUTER_API_KEY')
   if (key === undefined) {
@@ -48,7 +57,7 @@ export function chooseBackend(env: Env, root: string): BackendChoice | { error: 
     model,
     configDir,
     sessionEnv: {
-      ...env,
+      ...withoutSecrets(env),
       ANTHROPIC_BASE_URL: 'https://openrouter.ai/api',
       ANTHROPIC_AUTH_TOKEN: key,
       ANTHROPIC_API_KEY: '',

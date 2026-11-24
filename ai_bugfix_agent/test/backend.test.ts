@@ -5,14 +5,16 @@ import { chooseBackend } from '../src/steps/backend.ts'
 
 const ROOT = join('projekt', 'agent')
 
-test('Default openrouter: Umgebung zeigt auf OpenRouter, Login ist ausgesperrt', () => {
-  const choice = chooseBackend({ OPENROUTER_API_KEY: 'sk-or-1', PATH: 'x', ANTHROPIC_API_KEY: 'sk-ant-echt' }, ROOT)
+test('Default openrouter: Umgebung zeigt auf OpenRouter, Login und Geheimnisse sind ausgesperrt', () => {
+  const choice = chooseBackend(
+    { OPENROUTER_API_KEY: 'sk-or-1', PATH: 'x', ANTHROPIC_API_KEY: 'sk-ant-echt', GITHUB_TOKEN: 'g', SLACK_BOT_TOKEN: 's' },
+    ROOT,
+  )
   assert.ok(!('error' in choice))
   assert.equal(choice.backend, 'openrouter')
   assert.equal(choice.model, 'anthropic/claude-opus-5')
   assert.equal(choice.configDir, join(ROOT, '.claude-steps'))
   assert.deepEqual(choice.sessionEnv, {
-    OPENROUTER_API_KEY: 'sk-or-1',
     PATH: 'x',
     ANTHROPIC_BASE_URL: 'https://openrouter.ai/api',
     ANTHROPIC_AUTH_TOKEN: 'sk-or-1',
@@ -33,13 +35,19 @@ test('STEPS_MODEL überschreibt den Default', () => {
   assert.equal(choice.model, 'anthropic/claude-sonnet-5')
 })
 
-test('claude-login: keine eigene Umgebung, Modell ohne Präfix', () => {
-  const choice = chooseBackend({ STEPS_BACKEND: 'claude-login' }, ROOT)
+test('claude-login: Umgebung ohne Geheimnisse, Modell ohne Präfix', () => {
+  const choice = chooseBackend({ STEPS_BACKEND: 'claude-login', GITHUB_TOKEN: 'g', PATH: 'x' }, ROOT)
   assert.ok(!('error' in choice))
   assert.equal(choice.backend, 'claude-login')
   assert.equal(choice.model, 'claude-opus-5')
-  assert.equal(choice.sessionEnv, undefined)
+  assert.deepEqual(choice.sessionEnv, { STEPS_BACKEND: 'claude-login', PATH: 'x' })
   assert.equal(choice.configDir, undefined)
+})
+
+test('claude-login behält ANTHROPIC_API_KEY', () => {
+  const choice = chooseBackend({ STEPS_BACKEND: 'claude-login', ANTHROPIC_API_KEY: 'sk-ant' }, ROOT)
+  assert.ok(!('error' in choice))
+  assert.equal(choice.sessionEnv.ANTHROPIC_API_KEY, 'sk-ant')
 })
 
 test('unbekanntes Backend', () => {

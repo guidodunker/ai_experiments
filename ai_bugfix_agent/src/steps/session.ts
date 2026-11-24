@@ -24,8 +24,8 @@ export type SessionConfig = {
   maxBudgetUsd: number
   testCommand: string
   log: (message: string) => void
-  /** Umgebung des Claude-Code-Prozesses, z. B. für OpenRouter. Sonst die des Prozesses. */
-  env?: Record<string, string | undefined>
+  /** Umgebung des Claude-Code-Prozesses: ohne Geheimnisse, ggf. mit OpenRouter-Zugang */
+  env: Record<string, string | undefined>
 }
 
 const TOOLS: Record<Mode, string[]> = {
@@ -70,7 +70,7 @@ export function agentSdkSession(config: SessionConfig): RunSession {
         maxTurns: request.maxTurns,
         maxBudgetUsd: config.maxBudgetUsd,
         hooks: { PreToolUse: [{ hooks: [guard], onFailure: 'block' }] },
-        ...(config.env === undefined ? {} : { env: config.env }),
+        env: config.env,
       },
     })) {
       if (message.type === 'result') result = message
