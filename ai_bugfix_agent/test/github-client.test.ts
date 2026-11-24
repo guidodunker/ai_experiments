@@ -157,3 +157,17 @@ test('createIssue, updateBody, setLabels, addComment senden die erwarteten Anfra
     ],
   )
 })
+
+test('findOpenPull sucht nach owner:branch, createPull liefert die URL', async () => {
+  const { api, calls } = client([
+    json(200, []),
+    json(201, { html_url: 'https://github.com/o/r/pull/3' }),
+    json(200, [{ html_url: 'https://github.com/o/r/pull/3' }]),
+  ])
+  assert.equal(await api.findOpenPull('bugfix/issue-7'), undefined)
+  const input = { title: 'Fix #7: T', head: 'bugfix/issue-7', base: 'ai-bugfix-agent', body: 'B' }
+  assert.equal(await api.createPull(input), 'https://github.com/o/r/pull/3')
+  assert.equal(await api.findOpenPull('bugfix/issue-7'), 'https://github.com/o/r/pull/3')
+  assert.equal(calls[0]?.url, 'https://api.github.com/repos/o/r/pulls?head=o%3Abugfix%2Fissue-7&state=open')
+  assert.deepEqual(JSON.parse(calls[1]?.body ?? '{}'), input)
+})

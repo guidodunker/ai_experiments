@@ -33,6 +33,10 @@ export type GitHubApi = {
   addComment(number: number, body: string): Promise<void>
   /** Offene Issues mit dem Label, alle Seiten, ohne Pull Requests */
   listOpenIssues(label: string): Promise<IssueData[]>
+  /** URL des offenen Pull Requests mit diesem Branch als head, sonst undefined */
+  findOpenPull(branch: string): Promise<string | undefined>
+  /** Legt einen Pull Request an und liefert seine URL */
+  createPull(input: { title: string; head: string; base: string; body: string }): Promise<string>
 }
 
 /** Labels haben höchstens 50 Zeichen. */

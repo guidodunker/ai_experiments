@@ -8,6 +8,7 @@ export function fakeGitHub() {
   const labels = new Set<string>()
   let next = 1
   let clock = 0
+  const pulls: { title: string; head: string; base: string; body: string; url: string }[] = []
   const copy = (issue: IssueData): IssueData => ({ ...issue, labels: [...issue.labels] })
   const api: GitHubApi = {
     repo: 'o/r',
@@ -43,6 +44,12 @@ export function fakeGitHub() {
       comments.set(number, list)
     },
     listOpenIssues: async (label) => [...issues.values()].filter((i) => i.open && i.labels.includes(label)).map(copy),
+    findOpenPull: async (branch) => pulls.find((p) => p.head === branch)?.url,
+    createPull: async (input) => {
+      const url = `https://github.com/o/r/pull/${100 + pulls.length}`
+      pulls.push({ ...input, url })
+      return url
+    },
   }
-  return { api, issues, comments, labels }
+  return { api, issues, comments, labels, pulls }
 }

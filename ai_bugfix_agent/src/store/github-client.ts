@@ -153,5 +153,17 @@ export function githubClient(token: string, repo: string, options: ClientOptions
       const raw = await all<RawIssue>(`/repos/${repo}/issues?labels=${encodeURIComponent(label)}&state=open&per_page=100`)
       return raw.filter((issue) => issue.pull_request === undefined).map(toIssue)
     },
+    async findOpenPull(branch) {
+      const owner = repo.split('/')[0] ?? ''
+      const response = await call(
+        'GET',
+        `/repos/${repo}/pulls?head=${encodeURIComponent(`${owner}:${branch}`)}&state=open`,
+      )
+      return ((await response.json()) as { html_url: string }[])[0]?.html_url
+    },
+    async createPull(input) {
+      const response = await call('POST', `/repos/${repo}/pulls`, input)
+      return ((await response.json()) as { html_url: string }).html_url
+    },
   }
 }
