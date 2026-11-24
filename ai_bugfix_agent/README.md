@@ -78,6 +78,11 @@ Token: auf GitHub unter Settings → Developer settings → Fine-grained tokens,
 - `analysiert` → `geplant`: Unter `## Plan` steht der Fix.
 - `geplant` → `pr_offen`: Eine Sitzung setzt den Plan um, bis alle Tests grün sind. Der Agent prüft das selbst, committet, pusht `bugfix/issue-N` und öffnet einen Pull Request gegen `TARGET_BASE`. Feld `pr` im Ticket.
 - `geplant` → `fix_gescheitert`: Prüfung gescheitert (Testdatei geändert, Änderung außerhalb von `TARGET_DIR`, Tests rot). Unter `## Fix` steht der Grund. Zum Wiederholen den Status auf `geplant` setzen.
+- `pr_offen` → `freigegeben`: Jemand schreibt im Slack-Thread genau „approved“ oder „freigegeben“ (ohne Beachtung von Groß- und Kleinschreibung, höchstens mit `!` oder `.`). Das erkennt der Chat-Agent selbst, nicht das LLM. Er antwortet im Thread und vermerkt den Absender im Ticket (`freigegeben_von`).
+- `freigegeben` → `erledigt`: Squash-Merge des PRs in `TARGET_BASE`, Branch auf GitHub und lokal gelöscht, Issue geschlossen. Danach `TARGET_BASE` lokal aktualisieren (`git pull`), sonst findet eine neue Analyse behobene Bugs erneut.
+- `freigegeben` → `merge_gescheitert`: PR nicht mergebar oder geschlossen. Nach einer Korrektur den Status wieder auf `freigegeben` setzen.
+
+**Achtung:** Die Freigabe prüft nicht, wer sie schreibt. Jeder im Slack-Workspace kann einen Merge auslösen. Nur im eigenen Demo-Workspace verwenden.
 
 Der Fix-Schritt ist nur aktiv, wenn `GITHUB_TOKEN` und `GITHUB_REPO` gesetzt sind. Der Token braucht dann zusätzlich „Contents“ und „Pull requests“ (Read and write). Gepusht wird mit dem Token über Git-Konfiguration aus Umgebungsvariablen, ohne `--force` und nur der Branch des Tickets. Empfehlung: Branch-Protection für `main`.
 
@@ -112,4 +117,4 @@ $env:DEMO_TARGET="C:\workspace\tests\bugfix_demo"; npm run demo:init
 
 legt das Demo-Repo „Kontaktliste“ mit drei eingebauten Bugs an. `demo-chat.txt` enthält passende Meldungen und eine, die sich nicht reproduzieren lässt.
 
-Specs: `docs/specs/2026-11-23-analyse-plan-design.md`, `docs/specs/2026-11-24-slack-quelle-design.md`, `docs/specs/2026-11-24-github-issues-design.md`, `docs/specs/2026-11-24-fix-pr-design.md`.
+Specs: `docs/specs/2026-11-23-analyse-plan-design.md`, `docs/specs/2026-11-24-slack-quelle-design.md`, `docs/specs/2026-11-24-github-issues-design.md`, `docs/specs/2026-11-24-fix-pr-design.md`, `docs/specs/2026-11-24-freigabe-merge-design.md`.

@@ -9,6 +9,7 @@ import { slackReplyFromEnv } from './sources/config.ts'
 import { createAnalyzeStep } from './steps/analyze.ts'
 import { chooseBackend } from './steps/backend.ts'
 import { createFixStep } from './steps/fix.ts'
+import { createMergeStep } from './steps/merge.ts'
 import { createPlanStep } from './steps/plan.ts'
 import { githubPublisher } from './steps/publish.ts'
 import { runSteps } from './steps/runner.ts'
@@ -82,22 +83,43 @@ async function main(): Promise<number> {
   const steps: Step[] = [createAnalyzeStep({ ...common, base, testCommand }), createPlanStep(common)]
   const token = setting('GITHUB_TOKEN')
   const githubRepo = setting('GITHUB_REPO')
-  // Ohne GitHub-Zugang kein Push und kein Pull Request: `geplant` bleibt dann liegen.
-  if (token !== undefined && githubRepo !== undefined) {
+  let merged = false
+  // Ohne GitHub-Zugang kein Push, kein Pull Request und kein Merge: `geplant` bleibt dann liegen.
+  const github = token !== undefined && githubRepo !== undefined
+  if (github) {
+    const client = githubClient(token, githubRepo)
     steps.push(
       createFixStep({
         ...common,
         base,
         testCommand,
         label: (id) => store.label(id),
-        publish: githubPublisher(token, githubRepo, githubClient(token, githubRepo)),
+        publish: githubPublisher(token, githubRepo, client),
       }),
     )
+    const mergeStep = createMergeStep({
+      repo,
+      base,
+      github: client,
+      closeTicket: (id) => store.close(id),
+      label: (id) => store.label(id),
+      log,
+      branchName: common.branchName,
+    })
+    // Merkt sich einen Merge für den Hinweis auf git pull am Ende.
+    steps.push({
+      ...mergeStep,
+      run: async (ticket) => {
+        const result = await mergeStep.run(ticket)
+        if (result.status === 'erledigt') merged = true
+        return result
+      },
+    })
   }
 
   log(
     `Schritte für ${repo}${targetDir === '' ? '' : `/${targetDir}`} mit ${model} über ${backend}, ` +
-      `Tickets: ${store.kind}, Fix: ${steps.length === 3 ? `PR gegen ${base}` : 'aus (GITHUB_TOKEN/GITHUB_REPO fehlt)'}` +
+      `Tickets: ${store.kind}, Fix: ${github ? `PR und Merge gegen ${base}` : 'aus (GITHUB_TOKEN/GITHUB_REPO fehlt)'}` +
       `${only === undefined ? '' : `, nur Ticket ${only}`}.`,
   )
   try {
@@ -109,6 +131,7 @@ async function main(): Promise<number> {
       reply: slackReplyFromEnv(process.env),
       steps,
     })
+    if (merged) log(`${base} lokal aktualisieren: git -C "${repo}" pull`)
     return failed === 0 ? 0 : 1
   } catch (error) {
     log(`Fehler: ${error instanceof Error ? error.message : String(error)}`)
