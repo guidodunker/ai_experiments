@@ -22,10 +22,13 @@ test('Top-Posts nach ts sortiert, Antworten als Ebene 2, ID ist ts', () => {
     {
       id: '1764000001.000000',
       index: 0,
-      top: { level: 1, text: 'A' },
-      replies: [{ level: 2, text: 'a1' }, { level: 2, text: 'a2' }],
+      top: { level: 1, text: 'A', author: 'U1' },
+      replies: [
+        { level: 2, text: 'a1', author: 'U1' },
+        { level: 2, text: 'a2', author: 'U1' },
+      ],
     },
-    { id: '1764000002.000000', index: 1, top: { level: 1, text: 'B' }, replies: [] },
+    { id: '1764000002.000000', index: 1, top: { level: 1, text: 'B', author: 'U1' }, replies: [] },
   ])
 })
 
@@ -41,7 +44,7 @@ test('eigene Nachrichten fallen weg, über user und über bot_id', () => {
       ],
     ],
   ])
-  assert.deepEqual(toThreads(history, replies, ME)[0]?.replies, [{ level: 2, text: 'Danke' }])
+  assert.deepEqual(toThreads(history, replies, ME)[0]?.replies, [{ level: 2, text: 'Danke', author: 'U1' }])
 })
 
 test('Top-Post vom eigenen Bot fehlt samt Thread', () => {
@@ -67,7 +70,12 @@ test('thread_broadcast zählt nur als Antwort, nicht als Top-Post', () => {
   const replies = new Map([['1.000001', [msg('1.000002', 'auch im Channel', { subtype: 'thread_broadcast' })]]])
   const threads = toThreads(history, replies, ME)
   assert.equal(threads.length, 1)
-  assert.deepEqual(threads[0]?.replies, [{ level: 2, text: 'auch im Channel' }])
+  assert.deepEqual(threads[0]?.replies, [{ level: 2, text: 'auch im Channel', author: 'U1' }])
+})
+
+test('Nachricht ohne user hat keinen author', () => {
+  const threads = toThreads([{ ts: '1.000001', text: 'Bug' }], new Map(), ME)
+  assert.equal('author' in threads[0]!.top, false)
 })
 
 test('fehlende Bot-ID filtert keine fremden Nachrichten', () => {

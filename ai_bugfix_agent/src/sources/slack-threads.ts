@@ -23,6 +23,10 @@ function byTs(a: SlackMessage, b: SlackMessage): number {
   return a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0
 }
 
+function post(level: number, message: SlackMessage) {
+  return { level, text: message.text ?? '', ...(message.user === undefined ? {} : { author: message.user }) }
+}
+
 /**
  * Baut Threads aus der Channel-History und den Antworten je Top-Post
  * (Schlüssel: `ts` des Top-Posts). Eigene Nachrichten des Bots und
@@ -38,11 +42,11 @@ export function toThreads(history: SlackMessage[], replies: Map<string, SlackMes
     .map((top, index) => ({
       id: top.ts,
       index,
-      top: { level: 1, text: top.text ?? '' },
+      top: post(1, top),
       replies: (replies.get(top.ts) ?? [])
         // conversations.replies liefert den Top-Post als erstes Element mit.
         .filter((m) => m.ts !== top.ts && !isOwn(m) && REPLY_SUBTYPES.has(m.subtype))
         .sort(byTs)
-        .map((m) => ({ level: 2, text: m.text ?? '' })),
+        .map((m) => post(2, m)),
     }))
 }

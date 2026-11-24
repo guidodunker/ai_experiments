@@ -1,5 +1,8 @@
-/** Ein Beitrag im Chat. Ebene 1 ist ein Top-Post, 2 eine Antwort darauf usw. */
-export type Post = { level: number; text: string }
+/**
+ * Ein Beitrag im Chat. Ebene 1 ist ein Top-Post, 2 eine Antwort darauf usw.
+ * `author` ist die Slack-User-ID, bei `chat.txt` fehlt er.
+ */
+export type Post = { level: number; text: string; author?: string }
 
 /**
  * Ein Top-Post mit allen Antworten. `id` erkennt den Thread über Läufe hinweg
