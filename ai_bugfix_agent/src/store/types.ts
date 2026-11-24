@@ -26,4 +26,6 @@ export type TicketStore = {
   read(id: number): Promise<Ticket>
   /** Setzt Status und Felder, hängt den Abschnitt an, liefert das Ticket danach */
   applyResult(id: number, result: StepResult): Promise<Ticket>
+  /** Schließt das Ticket nach dem Merge. Bei Dateien genügt der Status, dort passiert nichts. */
+  close(id: number): Promise<void>
 }

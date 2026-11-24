@@ -165,5 +165,35 @@ export function githubClient(token: string, repo: string, options: ClientOptions
       const response = await call('POST', `/repos/${repo}/pulls`, input)
       return ((await response.json()) as { html_url: string }).html_url
     },
+    async getPull(number) {
+      const pull = (await (await call('GET', `/repos/${repo}/pulls/${number}`)).json()) as {
+        state: string
+        merged: boolean
+        merge_commit_sha: string | null
+      }
+      return {
+        state: pull.state === 'open' ? 'open' : 'closed',
+        merged: pull.merged,
+        mergeCommit: pull.merge_commit_sha ?? undefined,
+      }
+    },
+    async mergePull(number, commitTitle) {
+      const response = await call(
+        'PUT',
+        `/repos/${repo}/pulls/${number}/merge`,
+        { merge_method: 'squash', commit_title: commitTitle },
+        [405, 409],
+      )
+      const body = (await response.json()) as { sha?: string; message?: string }
+      return response.ok
+        ? { merged: true as const, sha: body.sha ?? '' }
+        : { merged: false as const, message: body.message ?? `HTTP ${response.status}` }
+    },
+    async deleteBranch(branch) {
+      await call('DELETE', `/repos/${repo}/git/refs/heads/${branch}`)
+    },
+    async closeIssue(number) {
+      await call('PATCH', issuePath(number), { state: 'closed', state_reason: 'completed' })
+    },
   }
 }

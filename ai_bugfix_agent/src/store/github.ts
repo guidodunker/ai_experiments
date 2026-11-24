@@ -37,6 +37,14 @@ export type GitHubApi = {
   findOpenPull(branch: string): Promise<string | undefined>
   /** Legt einen Pull Request an und liefert seine URL */
   createPull(input: { title: string; head: string; base: string; body: string }): Promise<string>
+  getPull(number: number): Promise<{ state: 'open' | 'closed'; merged: boolean; mergeCommit?: string }>
+  /** Squash-Merge. merged: false bei HTTP 405 oder 409, mit der Meldung von GitHub. */
+  mergePull(
+    number: number,
+    commitTitle: string,
+  ): Promise<{ merged: true; sha: string } | { merged: false; message: string }>
+  deleteBranch(branch: string): Promise<void>
+  closeIssue(number: number): Promise<void>
 }
 
 /** Labels haben höchstens 50 Zeichen. */
@@ -112,5 +120,7 @@ export function githubStore(api: GitHubApi): TicketStore {
       }
       return read(id)
     },
+
+    close: (id) => api.closeIssue(id),
   }
 }

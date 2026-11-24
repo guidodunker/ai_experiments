@@ -54,3 +54,11 @@ test('applyResult setzt Status und Felder, hängt Abschnitt an, liefert das neue
   assert.match(text, /^status: analysiert$/m)
   assert.match(text, /## Analyse\nUrsache X\n$/)
 })
+
+test('close ändert bei Dateien nichts', async () => {
+  const { dir, store: s } = await store()
+  await s.create(thread, fields, 'datei', NOW)
+  const before = await readFile(join(dir, 'bug_1.txt'), 'utf8')
+  await s.close(1)
+  assert.equal(await readFile(join(dir, 'bug_1.txt'), 'utf8'), before)
+})

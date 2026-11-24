@@ -31,5 +31,6 @@ export function fileStore(dir: string): TicketStore {
       await writeTicket(dir, updated)
       return updated
     },
+    close: async () => {},
   }
 }

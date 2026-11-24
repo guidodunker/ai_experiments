@@ -106,3 +106,10 @@ test('read eines fremden Issues wirft', async () => {
   gh.issues.set(50, { number: 50, title: 'fremd', body: '', labels: [], url: '', open: true })
   await assert.rejects(store.read(50), /Issue #50 gibt es nicht oder es gehört nicht zum Agenten/)
 })
+
+test('close schließt das Issue', async () => {
+  const { gh, store } = await created()
+  await store.close(1)
+  assert.equal(gh.issues.get(1)!.open, false)
+  assert.deepEqual(await store.list(), [])
+})

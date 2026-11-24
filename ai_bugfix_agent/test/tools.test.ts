@@ -60,6 +60,7 @@ function githubLikeStore(): TicketStore & { replies: number[] } {
     applyResult: async () => {
       throw new Error('nicht gebraucht')
     },
+    close: async () => {},
   }
 }
 

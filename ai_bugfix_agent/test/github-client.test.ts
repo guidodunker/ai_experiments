@@ -171,3 +171,27 @@ test('findOpenPull sucht nach owner:branch, createPull liefert die URL', async (
   assert.equal(calls[0]?.url, 'https://api.github.com/repos/o/r/pulls?head=o%3Abugfix%2Fissue-7&state=open')
   assert.deepEqual(JSON.parse(calls[1]?.body ?? '{}'), input)
 })
+test('getPull, mergePull, deleteBranch, closeIssue', async () => {
+  const { api, calls } = client([
+    json(200, { state: 'open', merged: false, merge_commit_sha: null }),
+    json(200, { sha: 'abc', merged: true, message: 'Pull Request successfully merged' }),
+    json(405, { message: 'Pull Request is not mergeable' }),
+    new Response(null, { status: 204 }),
+    json(200, {}),
+  ])
+  assert.deepEqual(await api.getPull(3), { state: 'open', merged: false, mergeCommit: undefined })
+  assert.deepEqual(await api.mergePull(3, 'Fix #7: T (#3)'), { merged: true, sha: 'abc' })
+  assert.deepEqual(await api.mergePull(3, 'Fix #7: T (#3)'), { merged: false, message: 'Pull Request is not mergeable' })
+  await api.deleteBranch('bugfix/issue-7')
+  await api.closeIssue(7)
+  assert.deepEqual(
+    calls.map((c) => [c.method, c.url, JSON.parse(c.body ?? 'null')]),
+    [
+      ['GET', 'https://api.github.com/repos/o/r/pulls/3', null],
+      ['PUT', 'https://api.github.com/repos/o/r/pulls/3/merge', { merge_method: 'squash', commit_title: 'Fix #7: T (#3)' }],
+      ['PUT', 'https://api.github.com/repos/o/r/pulls/3/merge', { merge_method: 'squash', commit_title: 'Fix #7: T (#3)' }],
+      ['DELETE', 'https://api.github.com/repos/o/r/git/refs/heads/bugfix/issue-7', null],
+      ['PATCH', 'https://api.github.com/repos/o/r/issues/7', { state: 'closed', state_reason: 'completed' }],
+    ],
+  )
+})

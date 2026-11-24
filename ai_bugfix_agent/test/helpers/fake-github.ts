@@ -9,6 +9,8 @@ export function fakeGitHub() {
   let next = 1
   let clock = 0
   const pulls: { title: string; head: string; base: string; body: string; url: string }[] = []
+  const pullStates = new Map<number, { state: 'open' | 'closed'; merged: boolean; mergeCommit?: string }>()
+  const deletedBranches: string[] = []
   const copy = (issue: IssueData): IssueData => ({ ...issue, labels: [...issue.labels] })
   const api: GitHubApi = {
     repo: 'o/r',
@@ -50,6 +52,17 @@ export function fakeGitHub() {
       pulls.push({ ...input, url })
       return url
     },
+    getPull: async (number) => pullStates.get(number) ?? { state: 'open', merged: false },
+    mergePull: async (number) => {
+      pullStates.set(number, { state: 'closed', merged: true, mergeCommit: `sha${number}` })
+      return { merged: true, sha: `sha${number}` }
+    },
+    deleteBranch: async (branch) => {
+      deletedBranches.push(branch)
+    },
+    closeIssue: async (number) => {
+      issues.get(number)!.open = false
+    },
   }
-  return { api, issues, comments, labels, pulls }
+  return { api, issues, comments, labels, pulls, pullStates, deletedBranches }
 }
