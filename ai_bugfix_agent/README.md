@@ -47,6 +47,21 @@ Danach `npm run watch`. Der Agent merkt sich den Slack-Stand in `state.slack.jso
 
 Ist der Agent offline, holt der nächste Start alle Nachrichten nach. Schlägt eine Antwort fehl, steht eine Warnung im Log und der Agent macht weiter. Er wiederholt die Antwort nicht.
 
+## Tickets als GitHub-Issues
+
+Mit `TICKET_STORE=github` legt der Agent Tickets als Issues in `GITHUB_REPO` an statt als Dateien in `tickets/`. `npm run steps` liest dann die Issues und schreibt zurück:
+
+- Status als Label `status:<wert>`, dazu `bugfix-agent`, `komponente:<…>`, `schweregrad:<…>`
+- Kopffelder als Tabelle im Body; der Agent pflegt nur den Bereich zwischen `<!-- bugfix-agent:kopf -->` und `<!-- /bugfix-agent:kopf -->`
+- Nachträge, Analyse und Plan als Kommentare. Kommentare von Menschen im Issue zählen ebenfalls als Nachtrag.
+- Branch im Ziel-Repo: `bugfix/issue-N`
+
+Den Status setzt ein Mensch zurück, indem er das Label wechselt, z. B. `status:nicht_reproduziert` → `status:neu`. Geschlossene Issues bearbeitet der Runner nicht.
+
+Token: auf GitHub unter Settings → Developer settings → Fine-grained tokens, „Only select repositories“ mit nur diesem Repo, Berechtigung „Issues: Read and write“.
+
+**Achtung:** In einem öffentlichen Repo sind alle Meldungen, Nachträge, Analysen und Pläne öffentlich, und jeder kann Kommentare schreiben, die in die Analyse einfließen. Nur mit Testdaten verwenden.
+
 ## Erweitern
 
 1. Neues Tool in `src/tools/` mit `defineTool` anlegen.
@@ -85,4 +100,4 @@ $env:DEMO_TARGET="C:\workspace\tests\bugfix_demo"; npm run demo:init
 
 legt das Demo-Repo „Kontaktliste“ mit drei eingebauten Bugs an. `demo-chat.txt` enthält passende Meldungen und eine, die sich nicht reproduzieren lässt.
 
-Specs: `docs/specs/2026-11-23-analyse-plan-design.md`, `docs/specs/2026-11-24-slack-quelle-design.md`. Fix, Push und MR folgen in Stufe 3.
+Specs: `docs/specs/2026-11-23-analyse-plan-design.md`, `docs/specs/2026-11-24-slack-quelle-design.md`, `docs/specs/2026-11-24-github-issues-design.md`. Fix, Push und MR folgen in Stufe 3.

@@ -4,7 +4,7 @@ import { openRouterModel } from './llm.ts'
 import { createLog } from './log.ts'
 import { runOnce, type RunDeps } from './run.ts'
 import { chooseChat } from './sources/config.ts'
-import { fileStore } from './store/file.ts'
+import { chooseStore } from './store/config.ts'
 import { createSerialRunner } from './watch.ts'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
@@ -34,12 +34,18 @@ async function main(): Promise<number | undefined> {
     return 2
   }
 
+  const store = await chooseStore(process.env, ROOT)
+  if ('error' in store) {
+    log(store.error)
+    return 2
+  }
+
   const deps: RunDeps = {
     source: chat.source,
     reply: chat.reply,
     link: chat.link,
     statePath: chat.statePath,
-    store: fileStore(join(ROOT, 'tickets')),
+    store,
     runModel: openRouterModel(apiKey, MODEL),
     log,
   }
@@ -63,7 +69,7 @@ async function main(): Promise<number | undefined> {
 
   // Watcher bzw. Socket-Verbindung halten den Prozess am Leben, bis Strg+C.
   chat.source.watch(() => void trigger())
-  log(`Beobachte ${chat.source.label} mit ${MODEL} (Strg+C beendet).`)
+  log(`Beobachte ${chat.source.label} mit ${MODEL}, Tickets: ${store.kind} (Strg+C beendet).`)
   await trigger()
   return undefined
 }
