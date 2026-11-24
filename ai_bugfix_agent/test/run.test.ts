@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { RunModel } from '../src/agent.ts'
 import { runOnce, type RunDeps } from '../src/run.ts'
+import { fileSource } from '../src/sources/file.ts'
+import type { ChatSource } from '../src/sources/types.ts'
 import type { State } from '../src/types.ts'
 
 const fakeModel: RunModel = async ({ input, tools }) => {
@@ -27,7 +29,7 @@ async function setup(chat: string | null): Promise<{ deps: RunDeps; logs: string
     dir,
     logs,
     deps: {
-      chatPath: join(dir, 'chat.txt'),
+      source: fileSource(join(dir, 'chat.txt')),
       statePath: join(dir, 'state.json'),
       ticketDir: join(dir, 'tickets'),
       runModel: fakeModel,
@@ -103,4 +105,32 @@ test('geänderter Top-Post wird gemeldet', async () => {
   await writeFile(join(dir, 'chat.txt'), '> Bug A, editiert\n')
   await runOnce(deps)
   assert.ok(logs.some((l) => l.includes('Top-Post wurde geändert')), logs.join('\n'))
+})
+
+test('Quelle mit eigenen IDs: Ticket trägt die ID, Antworten gehen an den Thread', async () => {
+  const { deps, dir } = await setup(null)
+  const source: ChatSource = {
+    name: 'slack',
+    label: 'Fake',
+    readThreads: async () => [
+      {
+        id: '1764000000.000100',
+        index: 0,
+        top: { level: 1, text: 'Bug im Login' },
+        replies: [{ level: 2, text: 'nur Firefox' }],
+      },
+    ],
+    watch: () => {},
+  }
+  const sent: [string, string][] = []
+  const reply = async (threadId: string, text: string) => {
+    sent.push([threadId, text])
+  }
+  assert.equal(await runOnce({ ...deps, source, reply }), 'ok')
+  const ticket = await readFile(join(dir, 'tickets', 'bug_1.txt'), 'utf8')
+  assert.match(ticket, /^thread: 1764000000\.000100\nquelle: slack$/m)
+  assert.deepEqual(sent, [
+    ['1764000000.000100', 'Ticket bug-1 angelegt: Bug (c, mittel)'],
+    ['1764000000.000100', 'Nachtrag an bug-1 angehängt.'],
+  ])
 })

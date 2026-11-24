@@ -1,12 +1,11 @@
-import { readFile } from 'node:fs/promises'
 import { handleEvent, type RunModel } from './agent.ts'
 import { diff } from './diff.ts'
-import { parseChat } from './parser.ts'
-import { applyEvent, isNotFound, loadState, saveState } from './state.ts'
+import type { ChatSource } from './sources/types.ts'
+import { applyEvent, loadState, saveState } from './state.ts'
 import type { ChatEvent, ChatReply } from './types.ts'
 
 export type RunDeps = {
-  chatPath: string
+  source: ChatSource
   reply: ChatReply
   statePath: string
   ticketDir: string
@@ -27,17 +26,12 @@ function summarize(event: ChatEvent): string {
  * setzt beim fehlgeschlagenen Ereignis wieder an.
  */
 export async function runOnce(deps: RunDeps): Promise<'ok' | 'missing'> {
-  let text: string
-  try {
-    text = await readFile(deps.chatPath, 'utf8')
-  } catch (error) {
-    if (isNotFound(error)) return 'missing'
-    throw error
-  }
+  const threads = await deps.source.readThreads()
+  if (threads === 'missing') return 'missing'
 
   const state = await loadState(deps.statePath)
   const persist = () => saveState(deps.statePath, state)
-  const { events, warnings } = diff(parseChat(text), state)
+  const { events, warnings } = diff(threads, state)
   for (const warning of warnings) deps.log(`Warnung: ${warning}`)
 
   for (const event of events) {
@@ -49,7 +43,7 @@ export async function runOnce(deps: RunDeps): Promise<'ok' | 'missing'> {
       runModel: deps.runModel,
       log: deps.log,
       now: deps.now ?? (() => new Date()),
-      source: 'datei',
+      source: deps.source.name,
       reply: deps.reply,
     })
     applyEvent(state, event)
