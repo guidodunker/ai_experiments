@@ -17,9 +17,7 @@ export function paginate<T>(items: T[], page: number, size: number): T[] {
   return items.slice(first, last)
 }
 
-const nameCollator = new Intl.Collator('de')
-
 /** Nach Namen sortiert; die übergebene Liste bleibt unverändert. */
 export function sortByName(contacts: Contact[]): Contact[] {
-  return [...contacts].sort((a, b) => nameCollator.compare(a.name, b.name))
+  return [...contacts].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
 }
