@@ -9,6 +9,7 @@
     "watch": "node --experimental-strip-types --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/main.ts --watch",
     "steps": "node --experimental-strip-types --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/steps-main.ts",
     "demo:init": "node --experimental-strip-types --disable-warning=ExperimentalWarning --env-file-if-exists=.env scripts/demo-init.ts",
+    "demo:reset": "node --experimental-strip-types --disable-warning=ExperimentalWarning --env-file-if-exists=.env scripts/demo-reset.ts",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test \"test/**/*.test.ts\"",
     "typecheck": "tsc"
   },
