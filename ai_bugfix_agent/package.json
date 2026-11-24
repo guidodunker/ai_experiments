@@ -2,7 +2,7 @@
   "name": "ai-bugfix-agent",
   "version": "0.1.0",
   "private": true,
-  "description": "Überwacht chat.txt und legt Bug-Tickets an",
+  "description": "Überwacht chat.txt oder einen Slack-Channel und legt Bug-Tickets an",
   "type": "module",
   "scripts": {
     "start": "node --experimental-strip-types --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/main.ts",

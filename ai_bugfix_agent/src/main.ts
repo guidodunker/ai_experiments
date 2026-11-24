@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { openRouterModel } from './llm.ts'
 import { createLog } from './log.ts'
 import { runOnce, type RunDeps } from './run.ts'
-import { fileReply, fileSource } from './sources/file.ts'
+import { chooseChat } from './sources/config.ts'
 import { createSerialRunner } from './watch.ts'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
@@ -27,11 +27,16 @@ async function main(): Promise<number | undefined> {
     return 2
   }
 
-  const source = fileSource(process.env.CHAT_FILE ?? join(ROOT, 'chat.txt'))
+  const chat = chooseChat(process.env, ROOT, log)
+  if ('error' in chat) {
+    log(chat.error)
+    return 2
+  }
+
   const deps: RunDeps = {
-    source,
-    reply: fileReply(log),
-    statePath: join(ROOT, 'state.json'),
+    source: chat.source,
+    reply: chat.reply,
+    statePath: chat.statePath,
     ticketDir: join(ROOT, 'tickets'),
     runModel: openRouterModel(apiKey, MODEL),
     log,
@@ -40,7 +45,7 @@ async function main(): Promise<number | undefined> {
   if (!process.argv.includes('--watch')) {
     try {
       if ((await runOnce(deps)) === 'missing') {
-        log(`${source.label} nicht gefunden.`)
+        log(`${chat.source.label} nicht gefunden.`)
         return 1
       }
       return 0
@@ -51,12 +56,12 @@ async function main(): Promise<number | undefined> {
   }
 
   const trigger = createSerialRunner(async () => {
-    if ((await runOnce(deps)) === 'missing') log(`Warte auf ${source.label} …`)
+    if ((await runOnce(deps)) === 'missing') log(`Warte auf ${chat.source.label} …`)
   }, (error) => log(describeError(error)))
 
-  // Der Watcher hält den Prozess am Leben, bis Strg+C.
-  source.watch(() => void trigger())
-  log(`Beobachte ${source.label} mit ${MODEL} (Strg+C beendet).`)
+  // Watcher bzw. Socket-Verbindung halten den Prozess am Leben, bis Strg+C.
+  chat.source.watch(() => void trigger())
+  log(`Beobachte ${chat.source.label} mit ${MODEL} (Strg+C beendet).`)
   await trigger()
   return undefined
 }
