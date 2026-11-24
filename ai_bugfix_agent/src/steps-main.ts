@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -7,10 +8,14 @@ import { createLog } from './log.ts'
 import { slackReplyFromEnv } from './sources/config.ts'
 import { createAnalyzeStep } from './steps/analyze.ts'
 import { chooseBackend } from './steps/backend.ts'
+import { createFixStep } from './steps/fix.ts'
 import { createPlanStep } from './steps/plan.ts'
+import { githubPublisher } from './steps/publish.ts'
 import { runSteps } from './steps/runner.ts'
 import { agentSdkSession } from './steps/session.ts'
+import type { Step } from './steps/types.ts'
 import { chooseStore } from './store/config.ts'
+import { githubClient } from './store/github-client.ts'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const log = createLog(join(ROOT, 'agent.log'))
@@ -30,6 +35,11 @@ async function main(): Promise<number> {
   const repo = resolve(ROOT, repoSetting)
   if (!(await isGitRepo(repo))) {
     log(`${repo} ist kein Git-Repo.`)
+    return 2
+  }
+  const targetDir = setting('TARGET_DIR') ?? ''
+  if (targetDir !== '' && !existsSync(join(repo, targetDir))) {
+    log(`TARGET_DIR=${targetDir} gibt es in ${repo} nicht.`)
     return 2
   }
 
@@ -60,10 +70,34 @@ async function main(): Promise<number> {
     log(store.error)
     return 2
   }
-  const common = { repo, worktreeRoot: tmpdir(), runSession, branchName: (id: number) => store.branch(id) }
+
+  const base = setting('TARGET_BASE') ?? 'main'
+  const common = {
+    repo,
+    worktreeRoot: tmpdir(),
+    runSession,
+    targetDir,
+    branchName: (id: number) => store.branch(id),
+  }
+  const steps: Step[] = [createAnalyzeStep({ ...common, base, testCommand }), createPlanStep(common)]
+  const token = setting('GITHUB_TOKEN')
+  const githubRepo = setting('GITHUB_REPO')
+  // Ohne GitHub-Zugang kein Push und kein Pull Request: `geplant` bleibt dann liegen.
+  if (token !== undefined && githubRepo !== undefined) {
+    steps.push(
+      createFixStep({
+        ...common,
+        base,
+        testCommand,
+        label: (id) => store.label(id),
+        publish: githubPublisher(token, githubRepo, githubClient(token, githubRepo)),
+      }),
+    )
+  }
 
   log(
-    `Schritte für ${repo} mit ${model} über ${backend}, Tickets: ${store.kind}` +
+    `Schritte für ${repo}${targetDir === '' ? '' : `/${targetDir}`} mit ${model} über ${backend}, ` +
+      `Tickets: ${store.kind}, Fix: ${steps.length === 3 ? `PR gegen ${base}` : 'aus (GITHUB_TOKEN/GITHUB_REPO fehlt)'}` +
       `${only === undefined ? '' : `, nur Ticket ${only}`}.`,
   )
   try {
@@ -73,10 +107,7 @@ async function main(): Promise<number> {
       log,
       only,
       reply: slackReplyFromEnv(process.env),
-      steps: [
-        createAnalyzeStep({ ...common, base: setting('TARGET_BASE') ?? 'main', testCommand }),
-        createPlanStep(common),
-      ],
+      steps,
     })
     return failed === 0 ? 0 : 1
   } catch (error) {

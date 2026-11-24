@@ -76,6 +76,12 @@ Token: auf GitHub unter Settings → Developer settings → Fine-grained tokens,
 - `neu` → `analysiert`: Ursache gefunden, ein roter Test liegt als Commit auf dem lokalen Branch `bugfix/bug-N`.
 - `neu` → `nicht_reproduziert`: kein roter Test. Unter `## Analyse` steht, was fehlt. Nach einer Ergänzung `status: neu` setzen, dann versucht es der nächste Lauf erneut.
 - `analysiert` → `geplant`: Unter `## Plan` steht der Fix.
+- `geplant` → `pr_offen`: Eine Sitzung setzt den Plan um, bis alle Tests grün sind. Der Agent prüft das selbst, committet, pusht `bugfix/issue-N` und öffnet einen Pull Request gegen `TARGET_BASE`. Feld `pr` im Ticket.
+- `geplant` → `fix_gescheitert`: Prüfung gescheitert (Testdatei geändert, Änderung außerhalb von `TARGET_DIR`, Tests rot). Unter `## Fix` steht der Grund. Zum Wiederholen den Status auf `geplant` setzen.
+
+Der Fix-Schritt ist nur aktiv, wenn `GITHUB_TOKEN` und `GITHUB_REPO` gesetzt sind. Der Token braucht dann zusätzlich „Contents“ und „Pull requests“ (Read and write). Gepusht wird mit dem Token über Git-Konfiguration aus Umgebungsvariablen, ohne `--force` und nur der Branch des Tickets. Empfehlung: Branch-Protection für `main`.
+
+Mit `TARGET_DIR` arbeiten alle Sitzungen nur in einem Unterordner von `TARGET_REPO`; dort läuft auch das Testkommando. Sitzungen und Testkommandos bekommen keine Tokens und Schlüssel (`GITHUB_TOKEN`, `SLACK_*`, `OPENROUTER_API_KEY`, `ANTHROPIC_*`), außer dem, den Claude Code selbst braucht.
 
 Bei Tickets mit `quelle: slack` erscheint jeder Statuswechsel im Thread der Meldung. Dafür braucht `npm run steps` `SLACK_BOT_TOKEN` und `SLACK_CHANNEL_ID`, aber keinen Socket Mode.
 
@@ -106,4 +112,4 @@ $env:DEMO_TARGET="C:\workspace\tests\bugfix_demo"; npm run demo:init
 
 legt das Demo-Repo „Kontaktliste“ mit drei eingebauten Bugs an. `demo-chat.txt` enthält passende Meldungen und eine, die sich nicht reproduzieren lässt.
 
-Specs: `docs/specs/2026-11-23-analyse-plan-design.md`, `docs/specs/2026-11-24-slack-quelle-design.md`, `docs/specs/2026-11-24-github-issues-design.md`. Fix, Push und MR folgen in Stufe 3.
+Specs: `docs/specs/2026-11-23-analyse-plan-design.md`, `docs/specs/2026-11-24-slack-quelle-design.md`, `docs/specs/2026-11-24-github-issues-design.md`, `docs/specs/2026-11-24-fix-pr-design.md`.

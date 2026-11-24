@@ -103,6 +103,8 @@ Alle Pfade nur im Arbeitsbereich. Der Prompt `src/steps/prompts/fix.md` verlangt
 
 Die Sitzung bekommt die Umgebung des Prozesses ohne `GITHUB_TOKEN`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY` und alle Variablen, die mit `SLACK_` beginnen. Bei `STEPS_BACKEND=openrouter` kommen `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, ein leerer `ANTHROPIC_API_KEY` und `CLAUDE_CONFIG_DIR` hinzu. Bei `claude-login` kommt `ANTHROPIC_API_KEY` hinzu, falls gesetzt. Das gilt für alle drei Modi.
 
+Auch das Testkommando, das der Code selbst ausführt (Basisprüfung, Prüfung nach Analyse und Fix), bekommt die Umgebung ohne diese Variablen. Nachgetragen im Plan.
+
 ## Sicherheit
 
 - Die Sitzung schreibt Code, und Code wie Testkommando laufen ohne Sandbox mit den Rechten des Benutzerkontos. Freigabe weiterhin nur für die Demo-Vorlage und Testdaten. Vor echtem Code: Container oder WSL2.
