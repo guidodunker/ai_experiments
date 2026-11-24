@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, posix } from 'node:path'
 import { z } from 'zod'
 import { formatTicketFile, type Ticket } from '../ticketfile.ts'
 
@@ -19,6 +19,29 @@ export function branchName(id: number): string {
 /** Fester Pfad je Branch, damit ein Folgelauf liegengebliebene Worktrees findet. */
 export function worktreePath(root: string, branch: string): string {
   return join(root, branch.replaceAll('/', '-'))
+}
+
+function normalizeDir(targetDir: string): string {
+  return targetDir.replaceAll('\\', '/').replace(/^\/+|\/+$/g, '')
+}
+
+/** Arbeitsbereich der Sitzung im Worktree; leeres `targetDir` = ganzer Worktree */
+export function workdirOf(worktree: string, targetDir: string): string {
+  const dir = normalizeDir(targetDir)
+  return dir === '' ? worktree : join(worktree, dir)
+}
+
+/** Pfad relativ zum Arbeitsbereich → relativ zum Repo, mit `/` getrennt, wie `git status` ihn nennt */
+export function toRepoPath(targetDir: string, path: string): string {
+  const dir = normalizeDir(targetDir)
+  const file = posix.normalize(path.replaceAll('\\', '/'))
+  return dir === '' ? file : `${dir}/${file}`
+}
+
+/** Liegt ein Repo-Pfad im Arbeitsbereich? */
+export function isUnder(targetDir: string, repoPath: string): boolean {
+  const dir = normalizeDir(targetDir)
+  return dir === '' || repoPath === dir || repoPath.startsWith(`${dir}/`)
 }
 
 /** Erster Satz der ersten Zeile, für die Logzeile. */

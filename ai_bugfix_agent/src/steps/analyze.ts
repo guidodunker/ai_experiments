@@ -3,7 +3,17 @@ import { z } from 'zod'
 import { runShell, tailLines } from '../command.ts'
 import { addWorktree, branchExists, changedFiles, commitFile, deleteBranch, removeWorktree } from '../git.ts'
 import type { Ticket } from '../ticketfile.ts'
-import { branchName, bulletList, firstSentence, loadPrompt, outputSchema, quoteTicket, worktreePath } from './common.ts'
+import {
+  branchName,
+  bulletList,
+  firstSentence,
+  loadPrompt,
+  outputSchema,
+  quoteTicket,
+  toRepoPath,
+  workdirOf,
+  worktreePath,
+} from './common.ts'
 import type { RunSession } from './session.ts'
 import type { Step, StepResult } from './types.ts'
 
@@ -33,26 +43,38 @@ export type AnalyzeDeps = {
   runSession: RunSession
   /** Default: bugfix/bug-N */
   branchName?: (id: number) => string
+  /** Arbeitsbereich relativ zum Repo; Default: das ganze Repo */
+  targetDir?: string
 }
 
-type Check = { ok: true; file: string; testOutput: string } | { ok: false; reason: string }
+type Check = { ok: true; file: string; repoFile: string; testOutput: string } | { ok: false; reason: string }
 
 /** Prüft selbst, was die Sitzung behauptet: genau die Testdatei geändert, Test rot, Name in der Ausgabe. */
-async function verifyRedTest(worktree: string, output: AnalyzeOutput, testCommand: string): Promise<Check> {
+async function verifyRedTest(
+  worktree: string,
+  workdir: string,
+  targetDir: string,
+  output: AnalyzeOutput,
+  testCommand: string,
+): Promise<Check> {
   if (output.testdatei === undefined || output.testname === undefined) {
     return { ok: false, reason: 'Das Ergebnis nennt keine Testdatei oder keinen Testnamen.' }
   }
-  const file = relative(worktree, resolve(worktree, output.testdatei)).replaceAll('\\', '/')
+  const file = relative(workdir, resolve(workdir, output.testdatei)).replaceAll('\\', '/')
+  const repoFile = toRepoPath(targetDir, file)
   const changed = await changedFiles(worktree)
-  if (changed.length !== 1 || changed[0] !== file) {
-    return { ok: false, reason: `Erwartet war nur eine Änderung an ${file}, geändert: ${changed.join(', ') || 'nichts'}.` }
+  if (changed.length !== 1 || changed[0] !== repoFile) {
+    return {
+      ok: false,
+      reason: `Erwartet war nur eine Änderung an ${repoFile}, geändert: ${changed.join(', ') || 'nichts'}.`,
+    }
   }
-  const run = await runShell(testCommand, worktree)
+  const run = await runShell(testCommand, workdir)
   if (run.code === 0) return { ok: false, reason: 'Mit dem neuen Test laufen alle Tests grün.' }
   if (!run.output.includes(output.testname)) {
     return { ok: false, reason: `Der Testname „${output.testname}“ kommt in der Testausgabe nicht vor.` }
   }
-  return { ok: true, file, testOutput: excerptFrom(run.output, output.testname) }
+  return { ok: true, file, repoFile, testOutput: excerptFrom(run.output, output.testname) }
 }
 
 /** Ausschnitt ab der ersten Zeile mit `needle`; die Zusammenfassung am Ende der Ausgabe zeigt den Fehler nicht. */
@@ -85,17 +107,19 @@ export function createAnalyzeStep(deps: AnalyzeDeps): Step {
         throw new Error(`Branch ${branch} existiert schon. Löschen mit: git -C "${deps.repo}" branch -D ${branch}`)
       }
       await addWorktree(deps.repo, worktree, branch, deps.base)
+      const targetDir = deps.targetDir ?? ''
+      const workdir = workdirOf(worktree, targetDir)
 
       let keepBranch = false
       try {
-        const baseline = await runShell(deps.testCommand, worktree)
+        const baseline = await runShell(deps.testCommand, workdir)
         if (baseline.code !== 0) {
           throw new Error(`Tests auf ${deps.base} schlagen schon fehl:\n${tailLines(baseline.output, OUTPUT_LINES)}`)
         }
 
         const session = await deps.runSession({
           mode: 'analyze',
-          cwd: worktree,
+          cwd: workdir,
           instructions: PROMPT,
           prompt: `Testkommando: ${deps.testCommand}\n\n${quoteTicket(ticket)}`,
           schema: SCHEMA,
@@ -103,11 +127,13 @@ export function createAnalyzeStep(deps: AnalyzeDeps): Step {
         })
         const output = AnalyzeOutput.parse(session.output)
         const cost = session.costUsd.toFixed(2)
-        const check = output.reproduziert ? await verifyRedTest(worktree, output, deps.testCommand) : undefined
+        const check = output.reproduziert
+          ? await verifyRedTest(worktree, workdir, targetDir, output, deps.testCommand)
+          : undefined
         const section = { heading: 'Analyse', text: formatAnalysis(output, check) }
 
         if (check?.ok) {
-          await commitFile(worktree, check.file, `bug ${ticket.id}: roter Test – ${ticket.header.get('titel') ?? ''}`)
+          await commitFile(worktree, check.repoFile, `bug ${ticket.id}: roter Test – ${ticket.header.get('titel') ?? ''}`)
           keepBranch = true
           return {
             status: 'analysiert',

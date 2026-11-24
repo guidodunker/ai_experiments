@@ -168,6 +168,35 @@ test('Branch existiert schon: Fehler mit Löschbefehl, Branch bleibt', async () 
   assert.equal(session.calls.length, 0)
 })
 
+test('TARGET_DIR: Sitzung und Tests im Unterordner, Commit mit Repo-Pfad', async () => {
+  const repo = await createRepo({
+    'sub/sum.mjs': 'export const sum = (a, b) => a - b\n',
+    'sub/sum.test.mjs': `import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { sum } from './sum.mjs'
+test('sum von 0 und 0', () => assert.equal(sum(0, 0), 0))
+`,
+    'README.md': 'Repo\n',
+  })
+  const worktreeRoot = await mkdtemp(join(tmpdir(), 'bugagent-wtroot-'))
+  const session = fakeSession(REPRODUCED, (cwd) => writeTest(cwd, RED_TEST))
+  const result = await createAnalyzeStep({
+    repo,
+    base: 'main',
+    testCommand: TEST_CMD,
+    worktreeRoot,
+    runSession: session.run,
+    targetDir: 'sub',
+  }).run(ticket)
+  assert.equal(result.status, 'analysiert')
+  assert.equal(result.fields?.test, 'test/sum-bug.test.mjs › sum addiert zwei Zahlen')
+  assert.equal(session.calls[0]?.cwd, join(worktreeRoot, 'bugfix-bug-7', 'sub'))
+  assert.equal(
+    (await git(repo, ['show', '--name-only', '--format=', 'bugfix/bug-7'])).trim(),
+    'sub/test/sum-bug.test.mjs',
+  )
+})
+
 test('Branch-Name aus den Deps', async () => {
   const env = await setup()
   const session = fakeSession(REPRODUCED, (cwd) => writeTest(cwd, RED_TEST))

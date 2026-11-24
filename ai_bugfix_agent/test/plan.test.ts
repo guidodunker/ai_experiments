@@ -90,6 +90,21 @@ test('Plan nennt eine Datei außerhalb des Repos: Fehler', async () => {
   await assert.rejects(step.run(ticket), /außerhalb des Repos/)
 })
 
+test('TARGET_DIR: Plan prüft Dateien im Unterordner', async () => {
+  const repo = await createRepo({ 'sub/sum.mjs': 'export const sum = (a, b) => a - b\n', 'README.md': 'x\n' })
+  await git(repo, ['branch', 'bugfix/bug-7'])
+  const worktreeRoot = await mkdtemp(join(tmpdir(), 'bugagent-wtroot-'))
+  const session = fakeSession(PLAN)
+  const result = await createPlanStep({ repo, worktreeRoot, runSession: session.run, targetDir: 'sub' }).run(ticket)
+  assert.equal(result.status, 'geplant')
+  assert.equal(session.calls[0]?.cwd, join(worktreeRoot, 'bugfix-bug-7', 'sub'))
+  const outside = { ...PLAN, schritte: [{ datei: '../README.md', neu: false, aenderung: 'x' }] }
+  await assert.rejects(
+    createPlanStep({ repo, worktreeRoot, runSession: fakeSession(outside).run, targetDir: 'sub' }).run(ticket),
+    /außerhalb des Repos/,
+  )
+})
+
 test('Plan ohne Schritte: Fehler', async () => {
   const env = await setup()
   const step = createPlanStep({ repo: env.repo, worktreeRoot: env.worktreeRoot, runSession: fakeSession({ ...PLAN, schritte: [] }).run })
