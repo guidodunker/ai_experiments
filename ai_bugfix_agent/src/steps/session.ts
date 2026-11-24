@@ -24,11 +24,14 @@ export type SessionConfig = {
   maxBudgetUsd: number
   testCommand: string
   log: (message: string) => void
+  /** Umgebung des Claude-Code-Prozesses: ohne Geheimnisse, ggf. mit OpenRouter-Zugang */
+  env: Record<string, string | undefined>
 }
 
 const TOOLS: Record<Mode, string[]> = {
   analyze: ['Read', 'Grep', 'Glob', 'Write', 'Edit', 'Bash'],
   plan: ['Read', 'Grep', 'Glob'],
+  fix: ['Read', 'Grep', 'Glob', 'Write', 'Edit', 'Bash'],
 }
 
 /** Der einzige Ort, der das Agent SDK anfasst. */
@@ -68,6 +71,7 @@ export function agentSdkSession(config: SessionConfig): RunSession {
         maxTurns: request.maxTurns,
         maxBudgetUsd: config.maxBudgetUsd,
         hooks: { PreToolUse: [{ hooks: [guard], onFailure: 'block' }] },
+        env: config.env,
       },
     })) {
       if (message.type === 'result') result = message

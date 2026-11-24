@@ -1,14 +1,17 @@
-import { readFile } from 'node:fs/promises'
 import { handleEvent, type RunModel } from './agent.ts'
+import { handleApproval, isApproval } from './approval.ts'
 import { diff } from './diff.ts'
-import { parseChat } from './parser.ts'
-import { applyEvent, isNotFound, loadState, saveState } from './state.ts'
-import type { ChatEvent } from './types.ts'
+import type { ChatSource } from './sources/types.ts'
+import { applyEvent, loadState, saveState } from './state.ts'
+import type { TicketStore } from './store/types.ts'
+import type { ChatEvent, ChatLink, ChatReply } from './types.ts'
 
 export type RunDeps = {
-  chatPath: string
+  source: ChatSource
+  reply: ChatReply
+  link?: ChatLink
   statePath: string
-  ticketDir: string
+  store: TicketStore
   runModel: RunModel
   log: (message: string) => void
   now?: () => Date
@@ -26,29 +29,39 @@ function summarize(event: ChatEvent): string {
  * setzt beim fehlgeschlagenen Ereignis wieder an.
  */
 export async function runOnce(deps: RunDeps): Promise<'ok' | 'missing'> {
-  let text: string
-  try {
-    text = await readFile(deps.chatPath, 'utf8')
-  } catch (error) {
-    if (isNotFound(error)) return 'missing'
-    throw error
-  }
+  const threads = await deps.source.readThreads()
+  if (threads === 'missing') return 'missing'
 
   const state = await loadState(deps.statePath)
   const persist = () => saveState(deps.statePath, state)
-  const { events, warnings } = diff(parseChat(text), state)
+  const { events, warnings } = diff(threads, state)
   for (const warning of warnings) deps.log(`Warnung: ${warning}`)
 
   for (const event of events) {
     deps.log(summarize(event))
-    await handleEvent(event, {
-      state,
-      ticketDir: deps.ticketDir,
-      persist,
-      runModel: deps.runModel,
-      log: deps.log,
-      now: deps.now ?? (() => new Date()),
-    })
+    const now = deps.now ?? (() => new Date())
+    const ticket = state.threads[event.thread.id]?.ticket ?? null
+    if (event.kind === 'NewReply' && ticket !== null && isApproval(event.reply.text)) {
+      // Fest im Code statt beim LLM: Eine Meldung kann keine Freigabe herbeiformulieren.
+      await handleApproval(ticket, event.thread, event.reply, {
+        store: deps.store,
+        reply: deps.reply,
+        log: deps.log,
+        now,
+      })
+    } else {
+      await handleEvent(event, {
+        state,
+        store: deps.store,
+        persist,
+        runModel: deps.runModel,
+        log: deps.log,
+        now,
+        source: deps.source.name,
+        reply: deps.reply,
+        link: deps.link,
+      })
+    }
     applyEvent(state, event)
     await persist()
   }

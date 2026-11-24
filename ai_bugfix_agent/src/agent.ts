@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs'
 import type { z } from 'zod'
 import { formatPost } from './parser.ts'
+import type { TicketStore } from './store/types.ts'
 import { TOOLS } from './tools/index.ts'
 import type { AgentTool, ToolContext } from './tools/types.ts'
-import type { ChatEvent, State } from './types.ts'
+import type { ChatEvent, ChatLink, ChatReply, SourceName, State } from './types.ts'
 
 /** Begrenzt den Tool-Loop, damit ein verwirrtes Modell keinen endlosen Lauf abrechnet. */
 export const MAX_STEPS = 4
@@ -30,11 +31,16 @@ export type RunModel = (request: {
 
 export type AgentDeps = {
   state: State
-  ticketDir: string
+  store: TicketStore
   persist: () => Promise<void>
   runModel: RunModel
   log: (message: string) => void
   now: () => Date
+  source: SourceName
+  /** Antwortweg der Quelle. Fehler fängt `handleEvent` ab. */
+  reply: ChatReply
+  /** Fehlt bei Quellen ohne URL, etwa `chat.txt`. Fehler fängt `handleEvent` ab. */
+  link?: ChatLink
   tools?: AgentTool[]
 }
 
@@ -58,9 +64,32 @@ export async function handleEvent(event: ChatEvent, deps: AgentDeps): Promise<vo
   const ctx: ToolContext = {
     event,
     state: deps.state,
-    ticketDir: deps.ticketDir,
+    store: deps.store,
     persist: deps.persist,
     now: deps.now,
+    source: deps.source,
+    // Nicht wiederholen: Das Ticket ist schon geschrieben, ein zweiter Versuch im nächsten Lauf gäbe ein Duplikat.
+    reply: async (text) => {
+      try {
+        await deps.reply(event.thread.id, text)
+      } catch (error) {
+        deps.log(
+          `Warnung: Antwort an Thread ${event.thread.index} gescheitert: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
+    },
+    // Ein fehlender Link darf das Ticket nicht verhindern.
+    link: async () => {
+      if (deps.link === undefined) return undefined
+      try {
+        return await deps.link(event.thread.id)
+      } catch (error) {
+        deps.log(
+          `Warnung: Link zu Thread ${event.thread.index} nicht ermittelt: ${error instanceof Error ? error.message : String(error)}`,
+        )
+        return undefined
+      }
+    },
   }
 
   let calls = 0
@@ -74,7 +103,7 @@ export async function handleEvent(event: ChatEvent, deps: AgentDeps): Promise<vo
     },
   }))
 
-  const ticket = deps.state.threads[event.thread.index]?.ticket ?? null
+  const ticket = deps.state.threads[event.thread.id]?.ticket ?? null
   const answer = await deps.runModel({ instructions: PROMPT, input: describeEvent(event, ticket), tools })
   if (typeof answer === 'string' && answer.trim() !== '') {
     deps.log(`Thread ${event.thread.index} → ${answer.trim().replace(/\s*\n\s*/g, ' ')}`)

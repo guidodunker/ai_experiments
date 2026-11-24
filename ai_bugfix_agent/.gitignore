@@ -7,8 +7,11 @@ node_modules/
 
 # Laufzeitdaten des Agenten
 state.json
+state.slack.json
 tickets/
 agent.log
 steps.lock
+# Eigenes Claude-Code-Verzeichnis der Sitzungen bei STEPS_BACKEND=openrouter
+.claude-steps/
 
 .idea/

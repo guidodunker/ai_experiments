@@ -1,14 +1,20 @@
 import type { z } from 'zod'
-import type { ChatEvent, State } from '../types.ts'
+import type { TicketStore } from '../store/types.ts'
+import type { ChatEvent, SourceName, State } from '../types.ts'
 
 /** Was ein Tool vom Agenten bekommt. Das LLM sieht davon nichts. */
 export type ToolContext = {
   event: ChatEvent
   state: State
-  ticketDir: string
+  store: TicketStore
   /** Schreibt den Zustand sofort auf die Platte. */
   persist: () => Promise<void>
   now: () => Date
+  source: SourceName
+  /** Antwortet im Thread des Ereignisses. Wirft nie, Fehler stehen als Warnung im Log. */
+  reply: (text: string) => Promise<void>
+  /** URL des Threads für den Ticketkopf. undefined, wenn die Quelle keine hat oder die Abfrage scheitert. */
+  link: () => Promise<string | undefined>
 }
 
 /**

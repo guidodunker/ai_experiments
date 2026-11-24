@@ -5,6 +5,7 @@ import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runSteps, type RunnerDeps } from '../src/steps/runner.ts'
+import { fileStore } from '../src/store/file.ts'
 import type { Step } from '../src/steps/types.ts'
 import { appendToTicket } from '../src/tickets.ts'
 
@@ -34,7 +35,7 @@ async function setup(tickets: Record<number, string>, steps: Step[]) {
     await writeFile(join(dir, `bug_${id}.txt`), ticketText(Number(id), status))
   }
   const logs: string[] = []
-  const deps: RunnerDeps = { ticketDir: dir, lockPath: join(dir, 'steps.lock'), steps, log: (m) => logs.push(m) }
+  const deps: RunnerDeps = { store: fileStore(dir), lockPath: join(dir, 'steps.lock'), steps, log: (m) => logs.push(m) }
   const read = (id: number) => readFile(join(dir, `bug_${id}.txt`), 'utf8')
   return { dir, deps, logs, read }
 }
@@ -54,7 +55,10 @@ test('Tickets ohne passenden Schritt bleiben unverändert', async () => {
   const env = await setup({ 1: 'geplant', 2: 'nicht_reproduziert' }, [analyze, plan])
   assert.equal(await runSteps(env.deps), 0)
   assert.equal(await env.read(1), ticketText(1, 'geplant'))
-  assert.deepEqual(env.logs, [])
+  assert.deepEqual(env.logs, [
+    'Ticket 1: status geplant, kein Schritt.',
+    'Ticket 2: status nicht_reproduziert, kein Schritt. Zum Wiederholen den Status auf neu setzen.',
+  ])
 })
 
 test('ein gescheiterter Schritt hält die anderen Tickets nicht auf', async () => {
@@ -99,6 +103,81 @@ test('Schritt ohne Statuswechsel läuft nicht endlos', async () => {
   const env = await setup({ 1: 'neu' }, [stuck])
   assert.equal(await runSteps(env.deps), 0)
   assert.equal(calls, 1)
+})
+
+async function slackSetup(reply: RunnerDeps['reply']) {
+  const env = await setup({}, [analyze, plan])
+  await writeFile(
+    join(env.dir, 'bug_1.txt'),
+    'id: 1\nstatus: neu\nthread: 1764000000.000100\nquelle: slack\ntitel: T1\n\n## Nachträge\n',
+  )
+  return { ...env, deps: { ...env.deps, reply } }
+}
+
+test('Slack-Ticket: jeder Statuswechsel erscheint im Thread', async () => {
+  const sent: [string, string][] = []
+  const env = await slackSetup(async (threadId, text) => {
+    sent.push([threadId, text])
+  })
+  assert.equal(await runSteps(env.deps), 0)
+  assert.deepEqual(sent, [
+    ['1764000000.000100', 'bug-1: analysiert (0.10 $): A'],
+    ['1764000000.000100', 'bug-1: geplant (0.10 $): P'],
+  ])
+})
+
+test('Datei-Ticket und Ticket ohne quelle: keine Antwort', async () => {
+  const sent: string[] = []
+  const env = await setup({ 1: 'neu' }, [analyze])
+  await writeFile(join(env.dir, 'bug_2.txt'), 'id: 2\nstatus: neu\nthread: 0\nquelle: datei\ntitel: T2\n\n## Nachträge\n')
+  assert.equal(await runSteps({ ...env.deps, reply: async (_id, text) => void sent.push(text) }), 0)
+  assert.deepEqual(sent, [])
+})
+
+test('scheiternde Antwort: Statuswechsel gilt, Warnung im Log', async () => {
+  const env = await slackSetup(async () => {
+    throw new Error('not_in_channel')
+  })
+  assert.equal(await runSteps(env.deps), 0)
+  assert.match(await env.read(1), /^status: geplant$/m)
+  assert.ok(
+    env.logs.includes('Warnung: Antwort an Thread 1764000000.000100 gescheitert: not_in_channel'),
+    env.logs.join('\n'),
+  )
+})
+
+test('Slack-Ticket ohne Slack-Konfiguration: Warnung statt Antwort', async () => {
+  const env = await slackSetup(undefined)
+  assert.equal(await runSteps(env.deps), 0)
+  assert.ok(
+    env.logs.includes(
+      'Warnung: Ticket 1 stammt aus Slack, aber SLACK_BOT_TOKEN oder SLACK_CHANNEL_ID fehlt. Keine Antwort im Thread.',
+    ),
+    env.logs.join('\n'),
+  )
+})
+
+test('Statusmeldung nutzt die Bezeichnung des Stores', async () => {
+  const sent: string[] = []
+  const env = await slackSetup(async (_threadId, text) => void sent.push(text))
+  const store = { ...fileStore(env.dir), label: (id: number) => `#${id}` }
+  assert.equal(await runSteps({ ...env.deps, store }), 0)
+  assert.deepEqual(sent, ['#1: analysiert (0.10 $): A', '#1: geplant (0.10 $): P'])
+})
+
+test('Speichern scheitert: eigene Meldung mit Ergebnis, Ticket gilt als gescheitert', async () => {
+  const env = await setup({ 1: 'neu' }, [analyze])
+  const store = {
+    ...fileStore(env.dir),
+    applyResult: async () => {
+      throw new Error('HTTP 502')
+    },
+  }
+  assert.equal(await runSteps({ ...env.deps, store }), 1)
+  assert.deepEqual(env.logs, [
+    'Ticket 1 analyze: Ergebnis nicht gespeichert: HTTP 502. Ergebnis war: analysiert (0.10 $): A',
+  ])
+  assert.equal(await env.read(1), ticketText(1, 'neu'))
 })
 
 test('Nachtrag während des Schritts geht nicht verloren', async () => {

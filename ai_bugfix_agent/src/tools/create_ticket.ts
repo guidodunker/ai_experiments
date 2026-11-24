@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { ensureThread, hashText } from '../state.ts'
-import { createTicket } from '../tickets.ts'
+import { oneLine } from '../tickets.ts'
 import { defineTool } from './types.ts'
 
 export const createTicketTool = defineTool({
@@ -20,13 +20,16 @@ export const createTicketTool = defineTool({
     if (entry.ticket !== null) {
       return { error: `Thread ${ctx.event.thread.index} hat bereits Ticket ${entry.ticket}.` }
     }
-    const id = await createTicket(ctx.ticketDir, ctx.event.thread, input, ctx.now())
+    const link = await ctx.link()
+    const { id, url } = await ctx.store.create(ctx.event.thread, input, ctx.source, ctx.now(), link)
     entry.ticket = id
     // Das Ticket gilt für diesen Text; seine Antworten sind noch nicht angehängt.
     entry.topHash = hashText(ctx.event.thread.top.text)
     entry.replyCount = 0
     // Sofort speichern, damit ein Abbruch danach kein zweites Ticket erzeugt.
     await ctx.persist()
+    const summary = `${oneLine(input.title)} (${oneLine(input.component)}, ${input.severity})`
+    await ctx.reply(`Ticket ${ctx.store.label(id)} angelegt: ${summary}${url === undefined ? '' : ` ${url}`}`)
     return { ticket: id }
   },
 })

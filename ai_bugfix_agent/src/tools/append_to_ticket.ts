@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { appendToTicket } from '../tickets.ts'
 import { defineTool } from './types.ts'
 
 export const appendToTicketTool = defineTool({
@@ -13,7 +12,9 @@ export const appendToTicketTool = defineTool({
   }),
   execute: async (input, ctx) => {
     const level = ctx.event.kind === 'NewReply' ? ctx.event.reply.level : 1
-    const ok = await appendToTicket(ctx.ticketDir, input.ticket, { level, text: input.text }, ctx.now())
-    return ok ? { ok: true } : { error: `Ticket ${input.ticket} existiert nicht.` }
+    const ok = await ctx.store.appendReply(input.ticket, { level, text: input.text }, ctx.now())
+    if (!ok) return { error: `Ticket ${input.ticket} existiert nicht.` }
+    await ctx.reply(`Nachtrag an ${ctx.store.label(input.ticket)} angehängt.`)
+    return { ok: true }
   },
 })

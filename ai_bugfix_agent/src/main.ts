@@ -3,12 +3,12 @@ import { fileURLToPath } from 'node:url'
 import { openRouterModel } from './llm.ts'
 import { createLog } from './log.ts'
 import { runOnce, type RunDeps } from './run.ts'
-import { createSerialRunner, watchChat } from './watch.ts'
+import { chooseChat } from './sources/config.ts'
+import { chooseStore } from './store/config.ts'
+import { createSerialRunner } from './watch.ts'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const MODEL = process.env.OPENROUTER_MODEL ?? '~anthropic/claude-haiku-latest'
-/** Editoren speichern auch halb getippte Zeilen; erst nach einer Tipp-Pause auswerten. */
-const DEBOUNCE_MS = 3000
 
 const log = createLog(join(ROOT, 'agent.log'))
 
@@ -28,10 +28,24 @@ async function main(): Promise<number | undefined> {
     return 2
   }
 
+  const chat = chooseChat(process.env, ROOT, log)
+  if ('error' in chat) {
+    log(chat.error)
+    return 2
+  }
+
+  const store = await chooseStore(process.env, ROOT)
+  if ('error' in store) {
+    log(store.error)
+    return 2
+  }
+
   const deps: RunDeps = {
-    chatPath: process.env.CHAT_FILE ?? join(ROOT, 'chat.txt'),
-    statePath: join(ROOT, 'state.json'),
-    ticketDir: join(ROOT, 'tickets'),
+    source: chat.source,
+    reply: chat.reply,
+    link: chat.link,
+    statePath: chat.statePath,
+    store,
     runModel: openRouterModel(apiKey, MODEL),
     log,
   }
@@ -39,7 +53,7 @@ async function main(): Promise<number | undefined> {
   if (!process.argv.includes('--watch')) {
     try {
       if ((await runOnce(deps)) === 'missing') {
-        log(`${deps.chatPath} nicht gefunden.`)
+        log(`${chat.source.label} nicht gefunden.`)
         return 1
       }
       return 0
@@ -50,12 +64,12 @@ async function main(): Promise<number | undefined> {
   }
 
   const trigger = createSerialRunner(async () => {
-    if ((await runOnce(deps)) === 'missing') log(`Warte auf ${deps.chatPath} …`)
+    if ((await runOnce(deps)) === 'missing') log(`Warte auf ${chat.source.label} …`)
   }, (error) => log(describeError(error)))
 
-  // Der Watcher hält den Prozess am Leben, bis Strg+C.
-  watchChat(deps.chatPath, () => void trigger(), DEBOUNCE_MS)
-  log(`Beobachte ${deps.chatPath} mit ${MODEL} (Strg+C beendet).`)
+  // Watcher bzw. Socket-Verbindung halten den Prozess am Leben, bis Strg+C.
+  chat.source.watch(() => void trigger())
+  log(`Beobachte ${chat.source.label} mit ${MODEL}, Tickets: ${store.kind} (Strg+C beendet).`)
   await trigger()
   return undefined
 }

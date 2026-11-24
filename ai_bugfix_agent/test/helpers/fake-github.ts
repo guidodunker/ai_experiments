@@ -1,0 +1,68 @@
+import type { CommentData, IssueData } from '../../src/store/github-format.ts'
+import type { GitHubApi } from '../../src/store/github.ts'
+
+/** GitHub im Speicher. Kommentare bekommen aufsteigende Zeitstempel. */
+export function fakeGitHub() {
+  const issues = new Map<number, IssueData>()
+  const comments = new Map<number, CommentData[]>()
+  const labels = new Set<string>()
+  let next = 1
+  let clock = 0
+  const pulls: { title: string; head: string; base: string; body: string; url: string }[] = []
+  const pullStates = new Map<number, { state: 'open' | 'closed'; merged: boolean; mergeCommit?: string }>()
+  const deletedBranches: string[] = []
+  const copy = (issue: IssueData): IssueData => ({ ...issue, labels: [...issue.labels] })
+  const api: GitHubApi = {
+    repo: 'o/r',
+    getRepo: async () => {},
+    ensureLabels: async (names) => {
+      for (const name of names) labels.add(name)
+    },
+    createIssue: async ({ title, body, labels: issueLabels }) => {
+      const number = next++
+      const issue = { number, title, body, labels: [...issueLabels], url: `https://github.com/o/r/issues/${number}`, open: true }
+      issues.set(number, issue)
+      return copy(issue)
+    },
+    getIssue: async (number) => {
+      const issue = issues.get(number)
+      return issue === undefined ? undefined : copy(issue)
+    },
+    updateBody: async (number, body) => {
+      issues.get(number)!.body = body
+    },
+    setLabels: async (number, issueLabels) => {
+      issues.get(number)!.labels = [...issueLabels]
+    },
+    listComments: async (number) => [...(comments.get(number) ?? [])],
+    addComment: async (number, body) => {
+      const list = comments.get(number) ?? []
+      list.push({
+        body,
+        login: 'bugfix-bot',
+        association: 'OWNER',
+        createdAt: new Date(Date.UTC(2026, 10, 24, 9, 0, clock++)).toISOString(),
+      })
+      comments.set(number, list)
+    },
+    listOpenIssues: async (label) => [...issues.values()].filter((i) => i.open && i.labels.includes(label)).map(copy),
+    findOpenPull: async (branch) => pulls.find((p) => p.head === branch)?.url,
+    createPull: async (input) => {
+      const url = `https://github.com/o/r/pull/${100 + pulls.length}`
+      pulls.push({ ...input, url })
+      return url
+    },
+    getPull: async (number) => pullStates.get(number) ?? { state: 'open', merged: false },
+    mergePull: async (number) => {
+      pullStates.set(number, { state: 'closed', merged: true, mergeCommit: `sha${number}` })
+      return { merged: true, sha: `sha${number}` }
+    },
+    deleteBranch: async (branch) => {
+      deletedBranches.push(branch)
+    },
+    closeIssue: async (number) => {
+      issues.get(number)!.open = false
+    },
+  }
+  return { api, issues, comments, labels, pulls, pullStates, deletedBranches }
+}

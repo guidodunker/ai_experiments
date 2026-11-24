@@ -45,9 +45,10 @@ In `.env`:
 | `TARGET_REPO` | Pfad zum Ziel-Repo. Muss ein Git-Repo sein. | – (Pflicht) |
 | `TARGET_BASE` | Branch, von dem `bugfix/bug-N` abzweigt | `main` |
 | `TARGET_TEST_CMD` | Testkommando im Ziel-Repo | `npm test` |
-| `STEPS_MODEL` | Modell der Sitzungen | `claude-opus-5` |
+| `STEPS_BACKEND` | Wer die Sitzungen bezahlt: `openrouter` (über `OPENROUTER_API_KEY`, eigenes `CLAUDE_CONFIG_DIR` `.claude-steps/`, leerer `ANTHROPIC_API_KEY`; der Claude-Code-Login bleibt unsichtbar) oder `claude-login`. Nachgetragen am 2026-11-24. | `openrouter` |
+| `STEPS_MODEL` | Modell der Sitzungen | `anthropic/claude-opus-5` bei `openrouter`, `claude-opus-5` bei `claude-login` |
 | `STEPS_MAX_BUDGET_USD` | Kostengrenze je Sitzung | `2` |
-| `ANTHROPIC_API_KEY` | Zugang zur API. Ohne Schlüssel nutzt das SDK einen vorhandenen Claude-Code-Login. | – |
+| `ANTHROPIC_API_KEY` | Nur bei `claude-login`: Zugang zur API. Ohne Schlüssel nutzt das SDK einen vorhandenen Claude-Code-Login. | – |
 
 ## Architektur
 

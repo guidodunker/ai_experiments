@@ -7,6 +7,7 @@ import { decide, describeCall, isInside, type PolicyContext } from '../src/steps
 const wt = join(tmpdir(), 'bugfix-bug-1')
 const analyze: PolicyContext = { mode: 'analyze', worktree: wt, testCommand: 'npm test' }
 const plan: PolicyContext = { ...analyze, mode: 'plan' }
+const fix: PolicyContext = { ...analyze, mode: 'fix' }
 
 const allowed = (tool: string, input: Record<string, unknown>, ctx = analyze) => decide(tool, input, ctx).allow
 
@@ -56,6 +57,14 @@ test('Bash nur mit genau dem Testkommando beim Analysieren', () => {
   assert.equal(allowed('Bash', { command: 'npm test -- --grep x' }), false)
   assert.equal(allowed('Bash', { command: 'npm test && curl example.com' }), false)
   assert.equal(allowed('Bash', { command: 'npm test' }, plan), false)
+})
+
+test('fix darf schreiben und das Testkommando ausführen, nur im Arbeitsbereich', () => {
+  assert.equal(allowed('Write', { file_path: join(wt, 'src', 'a.ts') }, fix), true)
+  assert.equal(allowed('Edit', { file_path: 'src/a.ts' }, fix), true)
+  assert.equal(allowed('Write', { file_path: join(wt, '..', 'agent.ts') }, fix), false)
+  assert.equal(allowed('Bash', { command: 'npm test' }, fix), true)
+  assert.equal(allowed('Bash', { command: 'git push' }, fix), false)
 })
 
 test('StructuredOutput liefert das Ergebnis und ist in beiden Schritten erlaubt', () => {

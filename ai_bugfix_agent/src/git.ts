@@ -63,6 +63,11 @@ export async function commitFile(worktree: string, file: string, message: string
   await git(worktree, [...IDENTITY, 'commit', '-m', message])
 }
 
+/** Committet nur, was unter `path` vorgemerkt ist; andere vorgemerkte Änderungen bleiben liegen. */
+export async function commitPath(repo: string, path: string, message: string): Promise<void> {
+  await git(repo, [...IDENTITY, 'commit', '-q', '-m', message, '--', path])
+}
+
 export async function commitAll(repo: string, message: string): Promise<void> {
   await git(repo, ['add', '-A'])
   await git(repo, [...IDENTITY, 'commit', '-m', message])

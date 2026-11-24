@@ -32,17 +32,25 @@ function collect(child: ChildProcess): Promise<CommandResult> {
   })
 }
 
+/** Was ein Testkommando oder eine Sitzung nie sehen soll */
+const SECRET = /^(GITHUB_TOKEN|OPENROUTER_API_KEY|ANTHROPIC_API_KEY|ANTHROPIC_AUTH_TOKEN|SLACK_.*)$/
+
+export function withoutSecrets(env: Record<string, string | undefined>): Record<string, string | undefined> {
+  return Object.fromEntries(Object.entries(env).filter(([key]) => !SECRET.test(key)))
+}
+
 /** Führt eine Kommandozeile über die Shell aus, z. B. das Testkommando des Ziel-Repos. */
 export function runShell(command: string, cwd: string): Promise<CommandResult> {
   // Läuft dieser Prozess selbst unter `node --test`, hielte sich ein `node --test`
   // des Ziel-Repos für einen Teilprozess davon und meldete Erfolg trotz roter Tests.
-  const { NODE_TEST_CONTEXT: _ignored, ...env } = process.env
+  // Tests stammen vom Modell: Tokens und Schlüssel bekommen sie nicht.
+  const { NODE_TEST_CONTEXT: _ignored, ...env } = withoutSecrets(process.env)
   return collect(spawn(command, { cwd, shell: true, env }))
 }
 
 /** Führt ein Programm ohne Shell aus; Argumente werden nicht interpretiert. */
-export function runFile(file: string, args: string[], cwd: string): Promise<CommandResult> {
-  return collect(spawn(file, args, { cwd }))
+export function runFile(file: string, args: string[], cwd: string, env?: NodeJS.ProcessEnv): Promise<CommandResult> {
+  return collect(spawn(file, args, { cwd, env }))
 }
 
 /** Die letzten `count` Zeilen, ohne Leerzeilen am Ende. */
