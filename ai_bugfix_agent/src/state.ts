@@ -16,12 +16,24 @@ export function isNotFound(error: unknown): boolean {
 }
 
 export async function loadState(path: string): Promise<State> {
+  let raw: { threads: unknown }
   try {
-    return JSON.parse(await readFile(path, 'utf8')) as State
+    raw = JSON.parse(await readFile(path, 'utf8')) as { threads: unknown }
   } catch (error) {
-    if (isNotFound(error)) return { threads: [] }
+    if (isNotFound(error)) return { threads: {} }
     throw error
   }
+  return { threads: migrateThreads(raw.threads) }
+}
+
+/** Bis Stufe 2 war `threads` ein Array mit der Position als Schlüssel und `null` in Lücken. */
+function migrateThreads(threads: unknown): Record<string, ThreadState> {
+  if (!Array.isArray(threads)) return threads as Record<string, ThreadState>
+  const result: Record<string, ThreadState> = {}
+  threads.forEach((entry: ThreadState | null, index) => {
+    if (entry !== null) result[String(index)] = entry
+  })
+  return result
 }
 
 export async function saveState(path: string, state: State): Promise<void> {
@@ -30,10 +42,10 @@ export async function saveState(path: string, state: State): Promise<void> {
 
 /** Liefert den Zustand eines Threads und legt ihn beim ersten Mal an. */
 export function ensureThread(state: State, thread: Thread): ThreadState {
-  const existing = state.threads[thread.index]
-  if (existing !== undefined && existing !== null) return existing
+  const existing = state.threads[thread.id]
+  if (existing !== undefined) return existing
   const created: ThreadState = { topHash: hashText(thread.top.text), replyCount: 0, ticket: null }
-  state.threads[thread.index] = created
+  state.threads[thread.id] = created
   return created
 }
 

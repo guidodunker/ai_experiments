@@ -7,13 +7,14 @@ import { describeEvent, handleEvent, MAX_STEPS, type RunModel } from '../src/age
 import type { ChatEvent, State, Thread } from '../src/types.ts'
 
 const thread: Thread = {
+  id: '2',
   index: 2,
   top: { level: 1, text: 'Export stürzt ab' },
   replies: [{ level: 2, text: 'Bei mir auch' }],
 }
 const newThread: ChatEvent = { kind: 'NewThread', thread }
 
-async function deps(runModel: RunModel, state: State = { threads: [] }) {
+async function deps(runModel: RunModel, state: State = { threads: {} }) {
   const logs: string[] = []
   return {
     logs,
@@ -64,7 +65,7 @@ test('Tool-Aufruf des Modells legt Ticket an', async () => {
     })
   })
   await handleEvent(newThread, d)
-  assert.equal(d.state.threads[2]?.ticket, 1)
+  assert.equal(d.state.threads['2']?.ticket, 1)
   assert.deepEqual(await readdir(d.ticketDir), ['bug_1.txt'])
 })
 

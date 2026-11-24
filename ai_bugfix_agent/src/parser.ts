@@ -20,7 +20,7 @@ export function parseChat(text: string): Thread[] {
 
     const post: Post = { level: match[1]!.length, text: match[2]! }
     if (post.level === 1) {
-      threads.push({ index: threads.length, top: post, replies: [] })
+      threads.push({ id: String(threads.length), index: threads.length, top: post, replies: [] })
       current = post
       continue
     }

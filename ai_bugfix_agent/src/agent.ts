@@ -74,7 +74,7 @@ export async function handleEvent(event: ChatEvent, deps: AgentDeps): Promise<vo
     },
   }))
 
-  const ticket = deps.state.threads[event.thread.index]?.ticket ?? null
+  const ticket = deps.state.threads[event.thread.id]?.ticket ?? null
   const answer = await deps.runModel({ instructions: PROMPT, input: describeEvent(event, ticket), tools })
   if (typeof answer === 'string' && answer.trim() !== '') {
     deps.log(`Thread ${event.thread.index} → ${answer.trim().replace(/\s*\n\s*/g, ' ')}`)

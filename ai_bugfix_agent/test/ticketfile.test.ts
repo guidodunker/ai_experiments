@@ -25,7 +25,7 @@ test('parseTicket ohne gültige id wirft', () => {
 
 test('formatTicketFile ergibt den Text eines neuen Tickets unverändert', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'bugagent-'))
-  const thread = { index: 0, top: { level: 1, text: 'Bug' }, replies: [] }
+  const thread = { id: '0', index: 0, top: { level: 1, text: 'Bug' }, replies: [] }
   const fields = { title: 'T', description: 'D', component: 'K', severity: 'hoch' as const }
   await createTicket(dir, thread, fields, new Date(2026, 10, 23, 9, 0, 0))
   const text = await readFile(join(dir, 'bug_1.txt'), 'utf8')

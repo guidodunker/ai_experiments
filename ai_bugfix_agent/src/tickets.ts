@@ -60,7 +60,7 @@ export function formatTicket(id: number, thread: Thread, fields: TicketFields, c
     `id: ${id}`,
     'status: neu',
     `erstellt: ${formatTimestamp(created)}`,
-    `thread: ${thread.index}`,
+    `thread: ${thread.id}`,
     `titel: ${oneLine(fields.title)}`,
     `komponente: ${oneLine(fields.component)}`,
     `schweregrad: ${fields.severity}`,

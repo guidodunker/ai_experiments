@@ -13,7 +13,7 @@ import {
 import type { Thread } from '../src/types.ts'
 
 const NOW = new Date(2026, 10, 20, 15, 42, 5)
-const thread: Thread = { index: 4, top: { level: 1, text: 'Die Suche funktioniert sehr langsam.' }, replies: [] }
+const thread: Thread = { id: '4', index: 4, top: { level: 1, text: 'Die Suche funktioniert sehr langsam.' }, replies: [] }
 const fields = {
   title: 'Suche reagiert sehr langsam',
   description: 'Nutzer meldet, dass die Suche sehr langsam ist.',

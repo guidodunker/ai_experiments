@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { RunModel } from '../src/agent.ts'
 import { runOnce, type RunDeps } from '../src/run.ts'
+import type { State } from '../src/types.ts'
 
 const fakeModel: RunModel = async ({ input, tools }) => {
   const call = (name: string, args: unknown) => tools.find((t) => t.name === name)!.execute(args)
@@ -47,9 +48,9 @@ test('Bug-Thread ergibt Ticket mit Nachtrag, anderer Thread nichts', async () =>
   const ticket = await readFile(join(dir, 'tickets', 'bug_1.txt'), 'utf8')
   assert.match(ticket, /> Bug im Login/)
   assert.match(ticket, /\(Antwort, Ebene 2\)\nnur Firefox\n$/)
-  const state = JSON.parse(await readFile(deps.statePath, 'utf8'))
+  const state = JSON.parse(await readFile(deps.statePath, 'utf8')) as State
   assert.deepEqual(
-    state.threads.map((t: { ticket: number | null; replyCount: number }) => [t.ticket, t.replyCount]),
+    Object.values(state.threads).map((t) => [t.ticket, t.replyCount]),
     [[1, 1], [null, 0]],
   )
 })
@@ -90,7 +91,7 @@ test('halb getippter Top-Post ohne Ticket wird nach Fertigstellung zum Ticket', 
   assert.match(ticket, /> Tippfehler Bug auf der Startseite/)
   assert.match(ticket, /\(Antwort, Ebene 2\)\ngesehen\n$/)
   const state = JSON.parse(await readFile(deps.statePath, 'utf8'))
-  assert.deepEqual(state.threads[0].replyCount, 1)
+  assert.deepEqual(state.threads['0'].replyCount, 1)
   await runOnce(deps)
   assert.equal((await readFile(join(dir, 'tickets', 'bug_1.txt'), 'utf8')).match(/### /g)?.length, 1)
 })
