@@ -1,4 +1,5 @@
 import { handleEvent, type RunModel } from './agent.ts'
+import { handleApproval, isApproval } from './approval.ts'
 import { diff } from './diff.ts'
 import type { ChatSource } from './sources/types.ts'
 import { applyEvent, loadState, saveState } from './state.ts'
@@ -38,17 +39,29 @@ export async function runOnce(deps: RunDeps): Promise<'ok' | 'missing'> {
 
   for (const event of events) {
     deps.log(summarize(event))
-    await handleEvent(event, {
-      state,
-      store: deps.store,
-      persist,
-      runModel: deps.runModel,
-      log: deps.log,
-      now: deps.now ?? (() => new Date()),
-      source: deps.source.name,
-      reply: deps.reply,
-      link: deps.link,
-    })
+    const now = deps.now ?? (() => new Date())
+    const ticket = state.threads[event.thread.id]?.ticket ?? null
+    if (event.kind === 'NewReply' && ticket !== null && isApproval(event.reply.text)) {
+      // Fest im Code statt beim LLM: Eine Meldung kann keine Freigabe herbeiformulieren.
+      await handleApproval(ticket, event.thread, event.reply, {
+        store: deps.store,
+        reply: deps.reply,
+        log: deps.log,
+        now,
+      })
+    } else {
+      await handleEvent(event, {
+        state,
+        store: deps.store,
+        persist,
+        runModel: deps.runModel,
+        log: deps.log,
+        now,
+        source: deps.source.name,
+        reply: deps.reply,
+        link: deps.link,
+      })
+    }
     applyEvent(state, event)
     await persist()
   }
