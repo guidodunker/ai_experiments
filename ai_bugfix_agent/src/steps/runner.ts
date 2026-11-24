@@ -76,6 +76,11 @@ async function advance(id: number, deps: RunnerDeps): Promise<boolean> {
     }
     const status = ticket.header.get('status') ?? ''
     const step = deps.steps.find((s) => s.accepts === status)
+    if (step === undefined && seen.size === 0) {
+      // Sonst endet ein Lauf ohne Zeile, und man weiß nicht, warum nichts passiert.
+      const hint = status === 'nicht_reproduziert' ? ' Zum Wiederholen den Status auf neu setzen.' : ''
+      deps.log(`Ticket ${id}: status ${status}, kein Schritt.${hint}`)
+    }
     if (step === undefined || seen.has(status)) return true
     seen.add(status)
 

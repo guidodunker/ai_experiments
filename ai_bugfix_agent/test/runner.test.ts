@@ -55,7 +55,10 @@ test('Tickets ohne passenden Schritt bleiben unverändert', async () => {
   const env = await setup({ 1: 'geplant', 2: 'nicht_reproduziert' }, [analyze, plan])
   assert.equal(await runSteps(env.deps), 0)
   assert.equal(await env.read(1), ticketText(1, 'geplant'))
-  assert.deepEqual(env.logs, [])
+  assert.deepEqual(env.logs, [
+    'Ticket 1: status geplant, kein Schritt.',
+    'Ticket 2: status nicht_reproduziert, kein Schritt. Zum Wiederholen den Status auf neu setzen.',
+  ])
 })
 
 test('ein gescheiterter Schritt hält die anderen Tickets nicht auf', async () => {
