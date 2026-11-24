@@ -13,7 +13,7 @@ function normalize(text: string): string {
 /** Seite `page` (ab 1) mit höchstens `size` Einträgen. */
 export function paginate<T>(items: T[], page: number, size: number): T[] {
   const first = (page - 1) * size
-  const last = Math.min(first + size, items.length - 1)
+  const last = Math.min(first + size, items.length)
   return items.slice(first, last)
 }
 
