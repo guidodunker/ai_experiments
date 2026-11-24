@@ -115,6 +115,8 @@ Bricht ein Lauf ab, bleibt eventuell `steps.lock` liegen. Läuft kein anderer Du
 $env:DEMO_TARGET="C:\workspace\tests\bugfix_demo"; npm run demo:init
 ```
 
-legt das Demo-Repo „Kontaktliste“ mit drei eingebauten Bugs an. `demo-chat.txt` enthält passende Meldungen und eine, die sich nicht reproduzieren lässt.
+legt das Demo-Repo „Kontaktliste“ mit drei eingebauten Bugs an.
+
+Ist ein Fix in die Vorlage `demo/` gemergt, setzt `npm run demo:reset` sie auf den Stand mit allen drei Bugs zurück (Tag `demo-start`) und committet das. Danach `git push`, damit neue Fixes und Pull Requests vom zurückgesetzten Stand ausgehen. `demo-chat.txt` enthält passende Meldungen und eine, die sich nicht reproduzieren lässt.
 
 Specs: `docs/specs/2026-11-23-analyse-plan-design.md`, `docs/specs/2026-11-24-slack-quelle-design.md`, `docs/specs/2026-11-24-github-issues-design.md`, `docs/specs/2026-11-24-fix-pr-design.md`, `docs/specs/2026-11-24-freigabe-merge-design.md`.
