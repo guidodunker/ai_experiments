@@ -177,7 +177,7 @@ Die Texte erzeugt der Code, nicht das LLM.
 |---|---|
 | `create_ticket` erfolgreich | `Ticket bug-<id> angelegt: <titel> (<komponente>, <schweregrad>)` |
 | `append_to_ticket` erfolgreich | `Nachtrag an bug-<id> angehängt.` |
-| Runner, Statuswechsel | `bug-<id>: <status> – <summary>`. Ohne `summary` nur `bug-<id>: <status>`. |
+| Runner, Statuswechsel | `bug-<id>: <status> <summary>`, also dieselbe Angabe wie im Log, z. B. `bug-3: analysiert (0.84 $): Vergleich ohne Umlaut-Normalisierung.` |
 
 Kein Ticket und kein Nachtrag ergeben keine Nachricht.
 

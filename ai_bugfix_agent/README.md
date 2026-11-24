@@ -1,6 +1,6 @@
 # ai_bugfix_agent
 
-Überwacht `chat.txt`, erkennt Bug-Meldungen in Top-Threads und legt dafür Tickets `tickets/bug_N.txt` an. Antworten auf Threads mit Ticket werden dem Ticket als Nachtrag angehängt.
+Überwacht `chat.txt` oder einen Slack-Channel, erkennt Bug-Meldungen in Top-Threads und legt dafür Tickets `tickets/bug_N.txt` an. Antworten auf Threads mit Ticket werden dem Ticket als Nachtrag angehängt.
 
 ## Chat-Format
 
@@ -29,6 +29,24 @@ Zu jedem Ereignis schreibt der Agent eine Zeile mit seiner Entscheidung und Begr
 
 Wird ein Top-Post ohne Ticket nachträglich geändert, bewertet der Agent ihn neu. Bei einem Top-Post mit Ticket meldet er die Änderung nur als Warnung.
 
+## Slack
+
+Mit `CHAT_SOURCE=slack` liest der Agent statt `chat.txt` den Channel `SLACK_CHANNEL_ID` und antwortet im Thread einer Meldung, wenn ein Ticket entsteht, wenn er einen Nachtrag anhängt und wenn `npm run steps` den Status ändert. Zu Nachrichten ohne Bug schreibt er nichts.
+
+Einrichtung, einmalig:
+
+1. Einen eigenen, kostenlosen Workspace anlegen, nicht den Firmen-Workspace, darin den Channel `#bugs`.
+2. Auf https://api.slack.com/apps „Create New App“ → „From a manifest“, Manifest aus `docs/specs/2026-11-24-slack-quelle-design.md`, Abschnitt „Einrichtung in Slack“.
+3. „Basic Information“ → „App-Level Tokens“ → Token mit Scope `connections:write` erzeugen (`xapp-…`).
+4. „OAuth & Permissions“ → „Install to Workspace“, Bot-Token kopieren (`xoxb-…`).
+5. In `#bugs`: `/invite @bugfix-agent`.
+6. Channel-ID aus den Channel-Details ablesen (`C…`).
+7. In `.env`: `CHAT_SOURCE=slack`, `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, `SLACK_CHANNEL_ID`.
+
+Danach `npm run watch`. Der Agent merkt sich den Slack-Stand in `state.slack.json`, getrennt von `state.json`. Die Tickets liegen für beide Quellen in `tickets/` und tragen im Kopf `quelle: slack` bzw. `quelle: datei`.
+
+Ist der Agent offline, holt der nächste Start alle Nachrichten nach. Schlägt eine Antwort fehl, steht eine Warnung im Log und der Agent macht weiter. Er wiederholt die Antwort nicht.
+
 ## Erweitern
 
 1. Neues Tool in `src/tools/` mit `defineTool` anlegen.
@@ -42,6 +60,8 @@ Wird ein Top-Post ohne Ticket nachträglich geändert, bewertet der Agent ihn ne
 - `neu` → `analysiert`: Ursache gefunden, ein roter Test liegt als Commit auf dem lokalen Branch `bugfix/bug-N`.
 - `neu` → `nicht_reproduziert`: kein roter Test. Unter `## Analyse` steht, was fehlt. Nach einer Ergänzung `status: neu` setzen, dann versucht es der nächste Lauf erneut.
 - `analysiert` → `geplant`: Unter `## Plan` steht der Fix.
+
+Bei Tickets mit `quelle: slack` erscheint jeder Statuswechsel im Thread der Meldung. Dafür braucht `npm run steps` `SLACK_BOT_TOKEN` und `SLACK_CHANNEL_ID`, aber keinen Socket Mode.
 
 ```powershell
 npm run steps                       # alle Tickets
@@ -65,4 +85,4 @@ $env:DEMO_TARGET="C:\workspace\tests\bugfix_demo"; npm run demo:init
 
 legt das Demo-Repo „Kontaktliste“ mit drei eingebauten Bugs an. `demo-chat.txt` enthält passende Meldungen und eine, die sich nicht reproduzieren lässt.
 
-Spec: `docs/specs/2026-11-23-analyse-plan-design.md`. Fix, Push und MR folgen in Stufe 3.
+Specs: `docs/specs/2026-11-23-analyse-plan-design.md`, `docs/specs/2026-11-24-slack-quelle-design.md`. Fix, Push und MR folgen in Stufe 3.
