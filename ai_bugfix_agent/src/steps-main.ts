@@ -8,6 +8,7 @@ import { createAnalyzeStep } from './steps/analyze.ts'
 import { createPlanStep } from './steps/plan.ts'
 import { runSteps } from './steps/runner.ts'
 import { agentSdkSession } from './steps/session.ts'
+import { fileStore } from './store/file.ts'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const log = createLog(join(ROOT, 'agent.log'))
@@ -46,12 +47,13 @@ async function main(): Promise<number> {
   const testCommand = setting('TARGET_TEST_CMD') ?? 'npm test'
   const model = setting('STEPS_MODEL') ?? 'claude-opus-5'
   const runSession = agentSdkSession({ model, maxBudgetUsd: budget, testCommand, log })
-  const common = { repo, worktreeRoot: tmpdir(), runSession }
+  const store = fileStore(join(ROOT, 'tickets'))
+  const common = { repo, worktreeRoot: tmpdir(), runSession, branchName: (id: number) => store.branch(id) }
 
   log(`Schritte für ${repo} mit ${model}${only === undefined ? '' : `, nur Ticket ${only}`}.`)
   try {
     const failed = await runSteps({
-      ticketDir: join(ROOT, 'tickets'),
+      store,
       lockPath: join(ROOT, 'steps.lock'),
       log,
       only,

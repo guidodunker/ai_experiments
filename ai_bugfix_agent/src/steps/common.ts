@@ -16,9 +16,9 @@ export function branchName(id: number): string {
   return `bugfix/bug-${id}`
 }
 
-/** Fester Pfad je Ticket, damit ein Folgelauf liegengebliebene Worktrees findet. */
-export function worktreePath(root: string, id: number): string {
-  return join(root, `bugfix-bug-${id}`)
+/** Fester Pfad je Branch, damit ein Folgelauf liegengebliebene Worktrees findet. */
+export function worktreePath(root: string, branch: string): string {
+  return join(root, branch.replaceAll('/', '-'))
 }
 
 /** Erster Satz der ersten Zeile, für die Logzeile. */

@@ -167,3 +167,20 @@ test('Branch existiert schon: Fehler mit Löschbefehl, Branch bleibt', async () 
   assert.equal(await branchExists(env.repo, 'bugfix/bug-7'), true)
   assert.equal(session.calls.length, 0)
 })
+
+test('Branch-Name aus den Deps', async () => {
+  const env = await setup()
+  const session = fakeSession(REPRODUCED, (cwd) => writeTest(cwd, RED_TEST))
+  const analyzeStep = createAnalyzeStep({
+    repo: env.repo,
+    base: 'main',
+    testCommand: TEST_CMD,
+    worktreeRoot: env.worktreeRoot,
+    runSession: session.run,
+    branchName: (id) => `bugfix/issue-${id}`,
+  })
+  const result = await analyzeStep.run(ticket)
+  assert.equal(result.fields?.branch, 'bugfix/issue-7')
+  assert.equal(session.calls[0]?.cwd, join(env.worktreeRoot, 'bugfix-issue-7'))
+  assert.equal(await branchExists(env.repo, 'bugfix/issue-7'), true)
+})

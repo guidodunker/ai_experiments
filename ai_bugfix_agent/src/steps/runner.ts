@@ -1,12 +1,11 @@
 import { rm, writeFile } from 'node:fs/promises'
-import { applyStepResult as applyResult } from '../store/file.ts'
-import { readTicket, writeTicket, type Ticket } from '../ticketfile.ts'
-import { listTicketIds } from '../tickets.ts'
+import type { TicketStore } from '../store/types.ts'
+import type { Ticket } from '../ticketfile.ts'
 import type { ChatReply } from '../types.ts'
-import type { Step } from './types.ts'
+import type { Step, StepResult } from './types.ts'
 
 export type RunnerDeps = {
-  ticketDir: string
+  store: TicketStore
   lockPath: string
   steps: Step[]
   log: (message: string) => void
@@ -35,7 +34,7 @@ export async function runSteps(deps: RunnerDeps): Promise<number> {
     throw error
   }
   try {
-    const ids = deps.only === undefined ? await listTicketIds(deps.ticketDir) : [deps.only]
+    const ids = deps.only === undefined ? await deps.store.list() : [deps.only]
     let failed = 0
     for (const id of ids) {
       if (!(await advance(id, deps))) failed++
@@ -70,7 +69,7 @@ async function advance(id: number, deps: RunnerDeps): Promise<boolean> {
   for (;;) {
     let ticket: Ticket
     try {
-      ticket = await readTicket(deps.ticketDir, id)
+      ticket = await deps.store.read(id)
     } catch (error) {
       deps.log(`Ticket ${id}: ${message(error)}`)
       return false
@@ -80,17 +79,24 @@ async function advance(id: number, deps: RunnerDeps): Promise<boolean> {
     if (step === undefined || seen.has(status)) return true
     seen.add(status)
 
+    let result: StepResult
     try {
-      const result = await step.run(ticket)
-      // Neu lesen: Der Chat-Agent kann während des Schritts einen Nachtrag angehängt haben.
-      const updated = applyResult(await readTicket(deps.ticketDir, id), result)
-      await writeTicket(deps.ticketDir, updated)
-      const change = `${result.status} ${result.summary}`.trimEnd()
-      deps.log(`Ticket ${id} ${step.name} → ${change}`)
-      await announce(updated, `bug-${id}: ${change}`, deps)
+      result = await step.run(ticket)
     } catch (error) {
       deps.log(`Ticket ${id} ${step.name} gescheitert: ${message(error)}`)
       return false
     }
+
+    const change = `${result.status} ${result.summary}`.trimEnd()
+    let updated: Ticket
+    try {
+      updated = await deps.store.applyResult(id, result)
+    } catch (error) {
+      // Die Sitzung ist bezahlt; das Ergebnis steht wenigstens im Log.
+      deps.log(`Ticket ${id} ${step.name}: Ergebnis nicht gespeichert: ${message(error)}. Ergebnis war: ${change}`)
+      return false
+    }
+    deps.log(`Ticket ${id} ${step.name} → ${change}`)
+    await announce(updated, `${deps.store.label(id)}: ${change}`, deps)
   }
 }

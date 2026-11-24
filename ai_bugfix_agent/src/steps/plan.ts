@@ -21,7 +21,13 @@ export type PlanOutput = z.infer<typeof PlanOutput>
 
 const SCHEMA = outputSchema(PlanOutput)
 
-export type PlanDeps = { repo: string; worktreeRoot: string; runSession: RunSession }
+export type PlanDeps = {
+  repo: string
+  worktreeRoot: string
+  runSession: RunSession
+  /** Default: bugfix/bug-N */
+  branchName?: (id: number) => string
+}
 
 function formatPlan(output: PlanOutput): string {
   const steps = output.schritte.map(
@@ -47,8 +53,8 @@ export function createPlanStep(deps: PlanDeps): Step {
     name: 'plan',
     accepts: 'analysiert',
     async run(ticket: Ticket): Promise<StepResult> {
-      const branch = ticket.header.get('branch') ?? branchName(ticket.id)
-      const worktree = worktreePath(deps.worktreeRoot, ticket.id)
+      const branch = ticket.header.get('branch') ?? (deps.branchName ?? branchName)(ticket.id)
+      const worktree = worktreePath(deps.worktreeRoot, branch)
       await removeWorktree(deps.repo, worktree)
       await addWorktree(deps.repo, worktree, branch)
       try {

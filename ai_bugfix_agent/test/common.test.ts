@@ -1,7 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { z } from 'zod'
-import { bulletList, firstSentence, outputSchema, quoteTicket } from '../src/steps/common.ts'
+import { join } from 'node:path'
+import { bulletList, firstSentence, outputSchema, quoteTicket, worktreePath } from '../src/steps/common.ts'
 import { parseTicket } from '../src/ticketfile.ts'
 
 test('firstSentence: erster Satz der ersten Zeile', () => {
@@ -23,6 +24,11 @@ test('outputSchema: JSON-Schema ohne $schema, das Claude Code nicht prüfen kann
   assert.equal('$schema' in schema, false)
   assert.equal(schema.type, 'object')
   assert.deepEqual(schema.required, ['a'])
+})
+
+test('worktreePath folgt dem Branch', () => {
+  assert.equal(worktreePath(join('t'), 'bugfix/bug-7'), join('t', 'bugfix-bug-7'))
+  assert.equal(worktreePath(join('t'), 'bugfix/issue-7'), join('t', 'bugfix-issue-7'))
 })
 
 test('bulletList', () => {

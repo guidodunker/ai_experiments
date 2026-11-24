@@ -31,6 +31,8 @@ export type AnalyzeDeps = {
   testCommand: string
   worktreeRoot: string
   runSession: RunSession
+  /** Default: bugfix/bug-N */
+  branchName?: (id: number) => string
 }
 
 type Check = { ok: true; file: string; testOutput: string } | { ok: false; reason: string }
@@ -76,8 +78,8 @@ export function createAnalyzeStep(deps: AnalyzeDeps): Step {
     name: 'analyze',
     accepts: 'neu',
     async run(ticket: Ticket): Promise<StepResult> {
-      const branch = branchName(ticket.id)
-      const worktree = worktreePath(deps.worktreeRoot, ticket.id)
+      const branch = (deps.branchName ?? branchName)(ticket.id)
+      const worktree = worktreePath(deps.worktreeRoot, branch)
       await removeWorktree(deps.repo, worktree)
       if (await branchExists(deps.repo, branch)) {
         throw new Error(`Branch ${branch} existiert schon. Löschen mit: git -C "${deps.repo}" branch -D ${branch}`)
