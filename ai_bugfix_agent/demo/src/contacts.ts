@@ -17,11 +17,7 @@ export function paginate<T>(items: T[], page: number, size: number): T[] {
   return items.slice(first, last)
 }
 
-/**
- * Nach Namen sortiert; die übergebene Liste bleibt unverändert.
- * Vergleich nach deutscher Collation, damit Umlaute wie ihr Grundbuchstabe
- * einsortiert werden (Ä wie A) statt nach UTF-16-Code-Units ans Listenende zu rutschen.
- */
+/** Nach Namen sortiert; die übergebene Liste bleibt unverändert. */
 export function sortByName(contacts: Contact[]): Contact[] {
-  return [...contacts].sort((a, b) => a.name.localeCompare(b.name, 'de'))
+  return [...contacts].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
 }
