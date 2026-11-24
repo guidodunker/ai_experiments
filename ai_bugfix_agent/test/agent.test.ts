@@ -1,9 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, readdir, readFile } from 'node:fs/promises'
+import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describeEvent, handleEvent, MAX_STEPS, type RunModel } from '../src/agent.ts'
+import { fileStore } from '../src/store/file.ts'
+import { formatTicketFile } from '../src/ticketfile.ts'
 import type { ChatEvent, ChatLink, State, Thread } from '../src/types.ts'
 
 const thread: Thread = {
@@ -20,7 +22,7 @@ async function deps(runModel: RunModel, state: State = { threads: {} }) {
     logs,
     deps: {
       state,
-      ticketDir: join(await mkdtemp(join(tmpdir(), 'bugagent-')), 'tickets'),
+      store: fileStore(join(await mkdtemp(join(tmpdir(), 'bugagent-')), 'tickets')),
       persist: async () => {},
       runModel,
       log: (message: string) => logs.push(message),
@@ -45,7 +47,7 @@ test('Link der Quelle landet im Ticket', async () => {
   const { deps: d } = await deps(createExport)
   d.link = async (threadId) => `https://x.slack.com/archives/C1/p${threadId}`
   await handleEvent(newThread, d)
-  assert.match(await readFile(join(d.ticketDir, 'bug_1.txt'), 'utf8'), /^link: https:\/\/x\.slack\.com\/archives\/C1\/p2$/m)
+  assert.match(formatTicketFile(await d.store.read(1)), /^link: https:\/\/x\.slack\.com\/archives\/C1\/p2$/m)
 })
 
 test('scheiternder Link ist nur eine Warnung, Ticket ohne Link', async () => {
@@ -54,7 +56,7 @@ test('scheiternder Link ist nur eine Warnung, Ticket ohne Link', async () => {
     throw new Error('message_not_found')
   }
   await handleEvent(newThread, d)
-  assert.doesNotMatch(await readFile(join(d.ticketDir, 'bug_1.txt'), 'utf8'), /^link:/m)
+  assert.doesNotMatch(formatTicketFile(await d.store.read(1)), /^link:/m)
   assert.deepEqual(logs, ['Warnung: Link zu Thread 2 nicht ermittelt: message_not_found'])
 })
 
@@ -95,7 +97,7 @@ test('Tool-Aufruf des Modells legt Ticket an', async () => {
   })
   await handleEvent(newThread, d)
   assert.equal(d.state.threads['2']?.ticket, 1)
-  assert.deepEqual(await readdir(d.ticketDir), ['bug_1.txt'])
+  assert.deepEqual(await d.store.list(), [1])
 })
 
 test('Begründung des Modells wird mit Thread-Index geloggt', async () => {

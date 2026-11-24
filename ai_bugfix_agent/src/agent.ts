@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import type { z } from 'zod'
 import { formatPost } from './parser.ts'
+import type { TicketStore } from './store/types.ts'
 import { TOOLS } from './tools/index.ts'
 import type { AgentTool, ToolContext } from './tools/types.ts'
 import type { ChatEvent, ChatLink, ChatReply, SourceName, State } from './types.ts'
@@ -30,7 +31,7 @@ export type RunModel = (request: {
 
 export type AgentDeps = {
   state: State
-  ticketDir: string
+  store: TicketStore
   persist: () => Promise<void>
   runModel: RunModel
   log: (message: string) => void
@@ -63,7 +64,7 @@ export async function handleEvent(event: ChatEvent, deps: AgentDeps): Promise<vo
   const ctx: ToolContext = {
     event,
     state: deps.state,
-    ticketDir: deps.ticketDir,
+    store: deps.store,
     persist: deps.persist,
     now: deps.now,
     source: deps.source,

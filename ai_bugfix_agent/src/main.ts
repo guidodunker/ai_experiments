@@ -4,6 +4,7 @@ import { openRouterModel } from './llm.ts'
 import { createLog } from './log.ts'
 import { runOnce, type RunDeps } from './run.ts'
 import { chooseChat } from './sources/config.ts'
+import { fileStore } from './store/file.ts'
 import { createSerialRunner } from './watch.ts'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
@@ -38,7 +39,7 @@ async function main(): Promise<number | undefined> {
     reply: chat.reply,
     link: chat.link,
     statePath: chat.statePath,
-    ticketDir: join(ROOT, 'tickets'),
+    store: fileStore(join(ROOT, 'tickets')),
     runModel: openRouterModel(apiKey, MODEL),
     log,
   }

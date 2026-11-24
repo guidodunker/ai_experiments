@@ -1,11 +1,12 @@
 import type { z } from 'zod'
+import type { TicketStore } from '../store/types.ts'
 import type { ChatEvent, SourceName, State } from '../types.ts'
 
 /** Was ein Tool vom Agenten bekommt. Das LLM sieht davon nichts. */
 export type ToolContext = {
   event: ChatEvent
   state: State
-  ticketDir: string
+  store: TicketStore
   /** Schreibt den Zustand sofort auf die Platte. */
   persist: () => Promise<void>
   now: () => Date

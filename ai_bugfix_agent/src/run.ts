@@ -2,6 +2,7 @@ import { handleEvent, type RunModel } from './agent.ts'
 import { diff } from './diff.ts'
 import type { ChatSource } from './sources/types.ts'
 import { applyEvent, loadState, saveState } from './state.ts'
+import type { TicketStore } from './store/types.ts'
 import type { ChatEvent, ChatLink, ChatReply } from './types.ts'
 
 export type RunDeps = {
@@ -9,7 +10,7 @@ export type RunDeps = {
   reply: ChatReply
   link?: ChatLink
   statePath: string
-  ticketDir: string
+  store: TicketStore
   runModel: RunModel
   log: (message: string) => void
   now?: () => Date
@@ -39,7 +40,7 @@ export async function runOnce(deps: RunDeps): Promise<'ok' | 'missing'> {
     deps.log(summarize(event))
     await handleEvent(event, {
       state,
-      ticketDir: deps.ticketDir,
+      store: deps.store,
       persist,
       runModel: deps.runModel,
       log: deps.log,

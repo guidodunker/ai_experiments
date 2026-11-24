@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import type { RunModel } from '../src/agent.ts'
 import { runOnce, type RunDeps } from '../src/run.ts'
 import { fileSource } from '../src/sources/file.ts'
+import { fileStore } from '../src/store/file.ts'
 import type { ChatSource } from '../src/sources/types.ts'
 import type { State } from '../src/types.ts'
 
@@ -31,7 +32,7 @@ async function setup(chat: string | null): Promise<{ deps: RunDeps; logs: string
     deps: {
       source: fileSource(join(dir, 'chat.txt')),
       statePath: join(dir, 'state.json'),
-      ticketDir: join(dir, 'tickets'),
+      store: fileStore(join(dir, 'tickets')),
       runModel: fakeModel,
       log: (m) => logs.push(m),
       now: () => new Date(2026, 10, 20, 12, 0, 0),
