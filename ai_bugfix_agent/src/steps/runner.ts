@@ -1,8 +1,9 @@
 import { rm, writeFile } from 'node:fs/promises'
-import { readTicket, setSection, writeTicket, type Ticket } from '../ticketfile.ts'
+import { applyStepResult as applyResult } from '../store/file.ts'
+import { readTicket, writeTicket, type Ticket } from '../ticketfile.ts'
 import { listTicketIds } from '../tickets.ts'
 import type { ChatReply } from '../types.ts'
-import type { Step, StepResult } from './types.ts'
+import type { Step } from './types.ts'
 
 export type RunnerDeps = {
   ticketDir: string
@@ -13,15 +14,6 @@ export type RunnerDeps = {
   only?: number
   /** Antwortet in Slack-Threads. Fehlt, wenn SLACK_BOT_TOKEN oder SLACK_CHANNEL_ID nicht gesetzt ist. */
   reply?: ChatReply
-}
-
-export function applyResult(ticket: Ticket, result: StepResult): Ticket {
-  const header = new Map(ticket.header)
-  header.set('status', result.status)
-  for (const [key, value] of Object.entries(result.fields ?? {})) header.set(key, value)
-  const body =
-    result.section === undefined ? ticket.body : setSection(ticket.body, result.section.heading, result.section.text)
-  return { id: ticket.id, header, body }
 }
 
 function message(error: unknown): string {
