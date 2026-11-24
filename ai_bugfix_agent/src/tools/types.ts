@@ -12,6 +12,8 @@ export type ToolContext = {
   source: SourceName
   /** Antwortet im Thread des Ereignisses. Wirft nie, Fehler stehen als Warnung im Log. */
   reply: (text: string) => Promise<void>
+  /** URL des Threads für den Ticketkopf. undefined, wenn die Quelle keine hat oder die Abfrage scheitert. */
+  link: () => Promise<string | undefined>
 }
 
 /**

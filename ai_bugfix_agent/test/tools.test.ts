@@ -33,6 +33,7 @@ async function context(event: ChatEvent): Promise<{ ctx: ToolContext; persisted:
     reply: async (text) => {
       replies.push(text)
     },
+    link: async () => undefined,
   }
   return { ctx, persisted: () => saves, replies }
 }

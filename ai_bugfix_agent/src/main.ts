@@ -36,6 +36,7 @@ async function main(): Promise<number | undefined> {
   const deps: RunDeps = {
     source: chat.source,
     reply: chat.reply,
+    link: chat.link,
     statePath: chat.statePath,
     ticketDir: join(ROOT, 'tickets'),
     runModel: openRouterModel(apiKey, MODEL),

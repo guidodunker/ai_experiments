@@ -1,13 +1,13 @@
 import { join } from 'node:path'
-import type { ChatReply } from '../types.ts'
+import type { ChatLink, ChatReply } from '../types.ts'
 import { fileReply, fileSource } from './file.ts'
 import { socketModeEvents, webApiClient } from './slack-client.ts'
-import { slackReply, slackSource } from './slack.ts'
+import { slackLink, slackReply, slackSource } from './slack.ts'
 import type { ChatSource } from './types.ts'
 
 type Env = Record<string, string | undefined>
 
-export type ChatSetup = { source: ChatSource; reply: ChatReply; statePath: string }
+export type ChatSetup = { source: ChatSource; reply: ChatReply; link?: ChatLink; statePath: string }
 
 const SLACK_SETTINGS = ['SLACK_BOT_TOKEN', 'SLACK_APP_TOKEN', 'SLACK_CHANNEL_ID'] as const
 
@@ -37,6 +37,7 @@ export function chooseChat(env: Env, root: string, log: (message: string) => voi
   return {
     source: slackSource(api, socketModeEvents(setting(env, 'SLACK_APP_TOKEN')!, log)),
     reply: slackReply(api),
+    link: slackLink(api),
     statePath: join(root, 'state.slack.json'),
   }
 }

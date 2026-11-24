@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { setTimeout as sleep } from 'node:timers/promises'
-import { slackReply, slackSource, type SlackApi, type SlackEvents, type SlackPage } from '../src/sources/slack.ts'
+import { slackLink, slackReply, slackSource, type SlackApi, type SlackEvents, type SlackPage } from '../src/sources/slack.ts'
 import type { SlackMessage } from '../src/sources/slack-threads.ts'
 
 function fakeApi(history: SlackPage[], replies: Record<string, SlackPage[]> = {}) {
@@ -16,6 +16,7 @@ function fakeApi(history: SlackPage[], replies: Record<string, SlackPage[]> = {}
     post: async (threadTs, text) => {
       posts.push([threadTs, text])
     },
+    permalink: async (ts) => `https://x.slack.com/archives/CBUGS/p${ts.replace('.', '')}`,
   }
   return { api, calls, posts }
 }
@@ -92,6 +93,10 @@ test('watch: jedes Verbinden löst einen Lauf aus', async () => {
   handlers!.connected()
   await sleep(60)
   assert.equal(changes, 2)
+})
+
+test('slackLink liefert den Permalink des Top-Posts', async () => {
+  assert.equal(await slackLink(fakeApi([]).api)('1.000001'), 'https://x.slack.com/archives/CBUGS/p1000001')
 })
 
 test('slackReply postet in den Thread', async () => {

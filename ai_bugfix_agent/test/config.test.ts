@@ -13,6 +13,7 @@ test('ohne CHAT_SOURCE: Datei chat.txt und state.json', () => {
   assert.equal(chat.source.name, 'datei')
   assert.equal(chat.source.label, join(ROOT, 'chat.txt'))
   assert.equal(chat.statePath, join(ROOT, 'state.json'))
+  assert.equal(chat.link, undefined)
 })
 
 test('CHAT_FILE wählt eine andere Datei', () => {
@@ -27,6 +28,7 @@ test('slack mit allen Variablen: Slack-Quelle und state.slack.json', () => {
   assert.equal(chat.source.name, 'slack')
   assert.equal(chat.source.label, 'Slack-Channel CBUGS')
   assert.equal(chat.statePath, join(ROOT, 'state.slack.json'))
+  assert.equal(typeof chat.link, 'function')
 })
 
 test('slack ohne Variable nennt sie', () => {

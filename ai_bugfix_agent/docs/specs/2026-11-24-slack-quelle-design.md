@@ -132,6 +132,7 @@ type State = { threads: Record<string, ThreadState> }
 
 - `thread:` enthält die Thread-ID.
 - Neues Kopffeld `quelle:` mit `datei` oder `slack`, direkt nach `thread:`. Tickets ohne `quelle` gelten als `datei`.
+- Neues Kopffeld `link:` nach `quelle:`, nur bei Slack: der Permalink des Top-Posts aus `chat.getPermalink`. Scheitert die Abfrage, steht eine Warnung im Log und das Ticket entsteht ohne `link:`. Nachgetragen am 2026-11-24 nach dem ersten Live-Test.
 
 ```
 id: 5
@@ -139,6 +140,7 @@ status: neu
 erstellt: 2026-11-24T09:30:00
 thread: 1764000000.123456
 quelle: slack
+link: https://<workspace>.slack.com/archives/C…/p1764000000123456?thread_ts=1764000000.123456&cid=C…
 titel: Suche mit Kleinbuchstaben findet Müller nicht
 …
 ```

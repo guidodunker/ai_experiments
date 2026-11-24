@@ -19,5 +19,8 @@ export type SourceName = 'datei' | 'slack'
 /** Antwortet im Thread mit dieser ID. Wirft bei einem Fehler. */
 export type ChatReply = (threadId: string, text: string) => Promise<void>
 
+/** Dauerhafte URL des Threads mit dieser ID. Wirft bei einem Fehler. */
+export type ChatLink = (threadId: string) => Promise<string>
+
 /** Schlüssel ist die Thread-ID. */
 export type State = { threads: Record<string, ThreadState> }

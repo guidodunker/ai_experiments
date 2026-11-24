@@ -61,6 +61,7 @@ export function formatTicket(
   fields: TicketFields,
   created: Date,
   source: SourceName,
+  link?: string,
 ): string {
   return [
     `id: ${id}`,
@@ -68,6 +69,7 @@ export function formatTicket(
     `erstellt: ${formatTimestamp(created)}`,
     `thread: ${thread.id}`,
     `quelle: ${source}`,
+    ...(link === undefined ? [] : [`link: ${oneLine(link)}`]),
     `titel: ${oneLine(fields.title)}`,
     `komponente: ${oneLine(fields.component)}`,
     `schweregrad: ${fields.severity}`,
@@ -90,11 +92,12 @@ export async function createTicket(
   fields: TicketFields,
   now: Date,
   source: SourceName,
+  link?: string,
 ): Promise<number> {
   await mkdir(dir, { recursive: true })
   const id = await nextTicketNumber(dir)
   // 'wx' schlägt fehl, falls die Datei inzwischen existiert, statt sie zu überschreiben.
-  await writeFile(ticketPath(dir, id), formatTicket(id, thread, fields, now, source), { flag: 'wx' })
+  await writeFile(ticketPath(dir, id), formatTicket(id, thread, fields, now, source, link), { flag: 'wx' })
   return id
 }
 

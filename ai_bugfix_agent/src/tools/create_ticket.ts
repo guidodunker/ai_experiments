@@ -20,7 +20,8 @@ export const createTicketTool = defineTool({
     if (entry.ticket !== null) {
       return { error: `Thread ${ctx.event.thread.index} hat bereits Ticket ${entry.ticket}.` }
     }
-    const id = await createTicket(ctx.ticketDir, ctx.event.thread, input, ctx.now(), ctx.source)
+    const link = await ctx.link()
+    const id = await createTicket(ctx.ticketDir, ctx.event.thread, input, ctx.now(), ctx.source, link)
     entry.ticket = id
     // Das Ticket gilt für diesen Text; seine Antworten sind noch nicht angehängt.
     entry.topHash = hashText(ctx.event.thread.top.text)

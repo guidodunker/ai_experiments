@@ -52,6 +52,11 @@ export function webApiClient(token: string, channel: string): SlackApi {
     async post(threadTs, text) {
       await client.chat.postMessage({ channel, thread_ts: threadTs, text })
     },
+    async permalink(ts) {
+      const response = await client.chat.getPermalink({ channel, message_ts: ts })
+      if (response.permalink === undefined) throw new Error('chat.getPermalink ohne permalink')
+      return response.permalink
+    },
   }
 }
 

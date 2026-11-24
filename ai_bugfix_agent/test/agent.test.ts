@@ -1,10 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, readdir } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describeEvent, handleEvent, MAX_STEPS, type RunModel } from '../src/agent.ts'
-import type { ChatEvent, State, Thread } from '../src/types.ts'
+import type { ChatEvent, ChatLink, State, Thread } from '../src/types.ts'
 
 const thread: Thread = {
   id: '2',
@@ -27,9 +27,36 @@ async function deps(runModel: RunModel, state: State = { threads: {} }) {
       now: () => new Date(2026, 10, 20, 9, 0, 0),
       source: 'datei' as const,
       reply: async (_threadId: string, _text: string) => {},
+      link: undefined as ChatLink | undefined,
     },
   }
 }
+
+const createExport: RunModel = async ({ tools }) => {
+  await tools.find((t) => t.name === 'create_ticket')!.execute({
+    title: 'Export stürzt ab',
+    description: 'Absturz.',
+    component: 'Export',
+    severity: 'hoch',
+  })
+}
+
+test('Link der Quelle landet im Ticket', async () => {
+  const { deps: d } = await deps(createExport)
+  d.link = async (threadId) => `https://x.slack.com/archives/C1/p${threadId}`
+  await handleEvent(newThread, d)
+  assert.match(await readFile(join(d.ticketDir, 'bug_1.txt'), 'utf8'), /^link: https:\/\/x\.slack\.com\/archives\/C1\/p2$/m)
+})
+
+test('scheiternder Link ist nur eine Warnung, Ticket ohne Link', async () => {
+  const { deps: d, logs } = await deps(createExport)
+  d.link = async () => {
+    throw new Error('message_not_found')
+  }
+  await handleEvent(newThread, d)
+  assert.doesNotMatch(await readFile(join(d.ticketDir, 'bug_1.txt'), 'utf8'), /^link:/m)
+  assert.deepEqual(logs, ['Warnung: Link zu Thread 2 nicht ermittelt: message_not_found'])
+})
 
 test('describeEvent enthält Ereignis, Ticketstatus und Thread', () => {
   const text = describeEvent(newThread, null)

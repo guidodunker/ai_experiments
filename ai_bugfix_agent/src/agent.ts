@@ -3,7 +3,7 @@ import type { z } from 'zod'
 import { formatPost } from './parser.ts'
 import { TOOLS } from './tools/index.ts'
 import type { AgentTool, ToolContext } from './tools/types.ts'
-import type { ChatEvent, ChatReply, SourceName, State } from './types.ts'
+import type { ChatEvent, ChatLink, ChatReply, SourceName, State } from './types.ts'
 
 /** Begrenzt den Tool-Loop, damit ein verwirrtes Modell keinen endlosen Lauf abrechnet. */
 export const MAX_STEPS = 4
@@ -38,6 +38,8 @@ export type AgentDeps = {
   source: SourceName
   /** Antwortweg der Quelle. Fehler fängt `handleEvent` ab. */
   reply: ChatReply
+  /** Fehlt bei Quellen ohne URL, etwa `chat.txt`. Fehler fängt `handleEvent` ab. */
+  link?: ChatLink
   tools?: AgentTool[]
 }
 
@@ -73,6 +75,18 @@ export async function handleEvent(event: ChatEvent, deps: AgentDeps): Promise<vo
         deps.log(
           `Warnung: Antwort an Thread ${event.thread.index} gescheitert: ${error instanceof Error ? error.message : String(error)}`,
         )
+      }
+    },
+    // Ein fehlender Link darf das Ticket nicht verhindern.
+    link: async () => {
+      if (deps.link === undefined) return undefined
+      try {
+        return await deps.link(event.thread.id)
+      } catch (error) {
+        deps.log(
+          `Warnung: Link zu Thread ${event.thread.index} nicht ermittelt: ${error instanceof Error ? error.message : String(error)}`,
+        )
+        return undefined
       }
     },
   }

@@ -82,6 +82,13 @@ test('createTicket schreibt Slack-Thread-ID und Quelle', async () => {
   assert.match(content, /^thread: 1764000000\.123456\nquelle: slack$/m)
 })
 
+test('createTicket schreibt den Link nach der Quelle', async () => {
+  const dir = await tempDir()
+  await createTicket(dir, thread, fields, NOW, 'slack', 'https://x.slack.com/archives/C1/p1')
+  const content = await readFile(join(dir, 'bug_1.txt'), 'utf8')
+  assert.match(content, /^quelle: slack\nlink: https:\/\/x\.slack\.com\/archives\/C1\/p1\ntitel: /m)
+})
+
 test('appendToTicket hängt einen Nachtrag an', async () => {
   const dir = await tempDir()
   await createTicket(dir, thread, fields, NOW, 'datei')

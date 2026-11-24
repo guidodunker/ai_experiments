@@ -1,4 +1,4 @@
-import type { ChatReply } from '../types.ts'
+import type { ChatLink, ChatReply } from '../types.ts'
 import { toThreads, type BotIdentity, type SlackMessage } from './slack-threads.ts'
 import type { ChatSource } from './types.ts'
 
@@ -11,6 +11,7 @@ export type SlackApi = {
   history(cursor?: string): Promise<SlackPage>
   replies(ts: string, cursor?: string): Promise<SlackPage>
   post(threadTs: string, text: string): Promise<void>
+  permalink(ts: string): Promise<string>
 }
 
 /** Socket Mode: meldet Nachrichten-Events mit ihrem Channel und jedes Verbinden, auch nach einem Reconnect. */
@@ -70,4 +71,9 @@ export function slackSource(api: SlackApi, events: SlackEvents, debounceMs = SLA
 
 export function slackReply(api: SlackApi): ChatReply {
   return (threadId, text) => api.post(threadId, text)
+}
+
+/** Die Thread-ID ist der `ts` des Top-Posts; sein Permalink öffnet den Thread. */
+export function slackLink(api: SlackApi): ChatLink {
+  return (threadId) => api.permalink(threadId)
 }
