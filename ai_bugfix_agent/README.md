@@ -2,6 +2,159 @@
 
 Überwacht `chat.txt` oder einen Slack-Channel, erkennt Bug-Meldungen in Top-Threads und legt dafür Tickets `tickets/bug_N.txt` an. Antworten auf Threads mit Ticket werden dem Ticket als Nachtrag angehängt.
 
+`npm run steps` bringt die Tickets danach voran: Analyse mit rotem Test, Plan, Fix als Pull Request und nach einer Freigabe im Chat den Merge.
+
+## Ein Harness um Sprachmodelle
+
+`ai_bugfix_agent` ist ein Harness. Der Code ruft Sprachmodelle auf, gibt ihnen Werkzeuge und legt alles fest, was um einen Modellaufruf herum geschieht. Die Modelle entscheiden im Einzelfall: Ist dieser Post ein Bug? Wo liegt die Ursache? Welche Zeile muss sich ändern? Der Harness bestimmt, wann ein Modell läuft, was es zu sehen bekommt, welche Werkzeuge es aufrufen darf, wie lange und für wie viel Geld es arbeitet und was mit seinem Ergebnis passiert.
+
+Status, Commit, Push und Merge übernimmt der Harness. Vorher prüft er nach, was das Modell behauptet.
+
+| Aufgabe | Modell | Harness |
+| --- | --- | --- |
+| Bug erkennen | entscheidet, ob ein Top-Post ein Bug ist; wählt Titel, Komponente, Schweregrad | liefert genau ein Ereignis mit Thread, bietet nur `create_ticket` und `append_to_ticket` an, höchstens 4 Schritte |
+| Freigabe | – | erkennt „approved“ oder „freigegeben“ per regulärem Ausdruck (`src/approval.ts`) |
+| Analyse | sucht die Ursache, schreibt einen roten Test | legt einen Worktree an, prüft vorher grüne Tests; danach: genau die Testdatei geändert, Tests rot, Testname in der Ausgabe; committet |
+| Plan | beschreibt den Fix | gibt nur Lesewerkzeuge; prüft, dass die genannten Dateien existieren |
+| Fix | ändert den Code | prüft: Änderungen nur in `TARGET_DIR`, Testdatei unverändert, Tests grün; committet, pusht, öffnet den Pull Request |
+| Merge | – | Squash-Merge über die GitHub-API, räumt Branches auf, schließt das Issue |
+
+Leitplanken:
+
+- **Zustandsautomat:** Der Status steht im Ticket. Jeder Schritt nimmt genau einen Status an und liefert ein `StepResult`. Das Ticket schreibt der Runner, nicht der Schritt und nicht das Modell (`src/steps/runner.ts`).
+- **Werkzeugrichtlinie:** Jeder Tool-Aufruf einer Sitzung läuft durch einen `PreToolUse`-Hook (`src/steps/policy.ts`). Erlaubt sind Pfade im Worktree und als einziges Shell-Kommando das Testkommando, Zeichen für Zeichen. Alles andere lehnt der Hook ab.
+- **Isolation:** Jede Sitzung arbeitet in einem eigenen Git-Worktree. Sie bekommt keine Tokens und lädt keine Einstellungen und kein `CLAUDE.md` aus dem Ziel-Repo (`settingSources: []`). Das ersetzt keine Sandbox, siehe **Sicherheit** unten.
+- **Grenzen:** 4 Schritte im Chat-Agenten, 25 bis 40 Turns je Sitzung, `STEPS_MAX_BUDGET_USD` je Sitzung.
+- **Strukturierte Ergebnisse:** Sitzungen antworten nach einem JSON-Schema, das aus einem zod-Schema entsteht. Der Harness parst das Ergebnis, bevor er etwas damit tut.
+- **Wiederaufsetzen:** Der Chat-Agent speichert seinen Stand nach jedem Ereignis, der Runner hält `steps.lock`. Ein abgebrochener Fix-Lauf holt beim nächsten Mal nur den Pull Request nach.
+
+## Architektur
+
+Zwei Prozesse teilen sich die Tickets. Der Chat-Agent (`npm start`, `npm run watch`) liest den Chat und legt Tickets an. Der Schritt-Runner (`npm run steps`) arbeitet sie ab. Beide kennen die Ablage nur über die Schnittstelle `TicketStore`, Dateien und GitHub-Issues sind austauschbar.
+
+```mermaid
+flowchart LR
+  subgraph Q["Chat-Quelle"]
+    file["chat.txt"]
+    slack["Slack-Channel"]
+  end
+
+  subgraph CA["Chat-Agent · npm start / npm run watch"]
+    run["run.ts<br/>diff + state.json"]
+    approval["approval.ts<br/>Freigabe-Regex"]
+    agent["agent.ts<br/>Tool-Loop, max. 4 Schritte"]
+    tools["tools/<br/>create_ticket<br/>append_to_ticket"]
+  end
+
+  haiku[("OpenRouter<br/>Haiku")]
+
+  subgraph TS["TicketStore"]
+    tfile["tickets/bug_N.txt"]
+    issues["GitHub-Issues"]
+  end
+
+  subgraph SR["Schritt-Runner · npm run steps"]
+    runner["runner.ts<br/>Status → Schritt"]
+    steps["analyze · plan · fix · merge"]
+    session["session.ts<br/>Claude Agent SDK"]
+    policy["policy.ts<br/>PreToolUse-Hook"]
+  end
+
+  opus[("Claude Code<br/>Opus über OpenRouter<br/>oder Claude-Login")]
+  wt["Git-Worktree<br/>im Ziel-Repo"]
+  gh["GitHub<br/>Push, Pull Request, Merge"]
+
+  file --> run
+  slack --> run
+  run -->|"neuer Post"| agent
+  run -->|"approved / freigegeben"| approval
+  agent <-->|"Prompt, Tool-Aufrufe"| haiku
+  agent --> tools
+  tools --> TS
+  approval --> TS
+  tools -.->|"Antwort im Thread"| slack
+
+  TS --> runner
+  runner --> steps
+  steps --> session
+  session <--> opus
+  opus -->|"Tool-Aufruf"| policy
+  policy -->|"erlaubt"| wt
+  steps -->|"Prüfen, Commit"| wt
+  steps -->|"fix, merge"| gh
+  runner -->|"Ergebnis"| TS
+  runner -.->|"Statuswechsel"| slack
+```
+
+### Ticket-Status
+
+Jeder Pfeil mit Schrittnamen ist ein Schritt des Runners. Die übrigen Übergänge löst ein Mensch aus.
+
+```mermaid
+stateDiagram-v2
+  [*] --> neu : Chat-Agent, create_ticket
+  neu --> analysiert : analyze, roter Test committet
+  neu --> nicht_reproduziert : analyze, kein roter Test
+  nicht_reproduziert --> neu : Mensch ergänzt, setzt neu
+  analysiert --> geplant : plan
+  geplant --> pr_offen : fix, Tests grün, PR offen
+  geplant --> fix_gescheitert : fix, Prüfung gescheitert
+  fix_gescheitert --> geplant : Mensch setzt geplant
+  pr_offen --> freigegeben : approved im Thread
+  freigegeben --> erledigt : merge
+  freigegeben --> merge_gescheitert : merge, nicht mergebar
+  merge_gescheitert --> freigegeben : Mensch korrigiert
+  erledigt --> [*]
+```
+
+### Ein Schritt im Detail
+
+Am Beispiel der Analyse. Plan und Fix laufen genauso ab, mit anderen Werkzeugen und anderen Prüfungen.
+
+```mermaid
+sequenceDiagram
+  participant R as Runner
+  participant S as Schritt analyze
+  participant W as Worktree
+  participant C as Claude-Sitzung
+  participant P as policy.ts
+  participant T as TicketStore
+
+  R->>T: Ticket lesen, status neu
+  R->>S: run(ticket)
+  S->>W: Worktree auf Branch bugfix/… anlegen
+  S->>W: Testkommando, muss grün sein
+  S->>C: Prompt, Ticket, JSON-Schema, Budget
+  loop bis Ergebnis oder Turn-Limit
+    C->>P: Tool-Aufruf
+    P-->>C: erlaubt oder abgelehnt mit Grund
+    C->>W: Read, Edit, Testkommando
+  end
+  C-->>S: strukturiertes Ergebnis und Kosten
+  S->>W: nachprüfen: nur Testdatei geändert, Test rot
+  S->>W: Commit roter Test
+  S->>W: Worktree entfernen
+  S-->>R: StepResult analysiert
+  R->>T: Status, Felder, Abschnitt Analyse
+  R-->>R: nächster Schritt für dasselbe Ticket
+```
+
+### Wo was liegt
+
+| Pfad | Inhalt |
+| --- | --- |
+| `src/main.ts`, `src/run.ts` | Einstieg und Lauf des Chat-Agenten |
+| `src/diff.ts`, `src/state.ts` | Was ist seit dem letzten Lauf neu |
+| `src/agent.ts`, `src/llm.ts`, `src/prompt.md` | Tool-Loop über OpenRouter, Prompt des Chat-Agenten |
+| `src/tools/` | Werkzeuge des Chat-Agenten |
+| `src/approval.ts` | Freigabe im Chat, ohne LLM |
+| `src/sources/` | Chat-Quellen: Datei, Slack |
+| `src/store/` | Ticket-Ablage: Dateien, GitHub-Issues |
+| `src/steps-main.ts`, `src/steps/runner.ts` | Einstieg und Zustandsautomat des Runners |
+| `src/steps/analyze.ts`, `plan.ts`, `fix.ts`, `merge.ts` | Die Schritte mit ihren Prüfungen |
+| `src/steps/session.ts`, `policy.ts`, `backend.ts` | Claude-Sitzung, Werkzeugrichtlinie, wer bezahlt |
+| `src/steps/prompts/` | Prompts der Sitzungen |
+
 ## Chat-Format
 
 ```
